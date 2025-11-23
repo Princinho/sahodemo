@@ -1,0 +1,88 @@
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Home, Package, FileText, LogOut, LayoutDashboard } from "lucide-react";
+
+export const AdminLayout = () => {
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-primary text-primary-foreground flex flex-col">
+        <div className="p-6">
+          <Link to="/admin" className="block">
+            <h1 className="text-2xl font-bold">SAHO Admin</h1>
+            <p className="text-sm opacity-75">Back-Office</p>
+          </Link>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2">
+          <Link to="/admin">
+            <Button
+              variant={isActive("/admin") ? "secondary" : "ghost"}
+              className={`w-full justify-start ${
+                isActive("/admin") ? "bg-primary-foreground text-primary" : "text-primary-foreground hover:bg-primary-foreground/10"
+              }`}
+            >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Tableau de Bord
+            </Button>
+          </Link>
+
+          <Link to="/admin/products">
+            <Button
+              variant={isActive("/admin/products") ? "secondary" : "ghost"}
+              className={`w-full justify-start ${
+                isActive("/admin/products") ? "bg-primary-foreground text-primary" : "text-primary-foreground hover:bg-primary-foreground/10"
+              }`}
+            >
+              <Package className="mr-2 h-4 w-4" />
+              Produits
+            </Button>
+          </Link>
+
+          <Link to="/admin/quotes">
+            <Button
+              variant={isActive("/admin/quotes") ? "secondary" : "ghost"}
+              className={`w-full justify-start ${
+                isActive("/admin/quotes") ? "bg-primary-foreground text-primary" : "text-primary-foreground hover:bg-primary-foreground/10"
+              }`}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Demandes de Devis
+            </Button>
+          </Link>
+        </nav>
+
+        <div className="p-4 space-y-2">
+          <Link to="/">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Retour au Site
+            </Button>
+          </Link>
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Déconnexion
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 bg-background">
+        <div className="container mx-auto p-8">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+};
