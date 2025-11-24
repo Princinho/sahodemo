@@ -24,8 +24,8 @@ import {
 import { ProductCard } from "@/components/ProductCard";
 
 const ProductDetail = () => {
-  const { id } = useParams();
-  const product = products.find((p) => p.id === id);
+  const { slug } = useParams();
+  const product = products.find((p) => p.slug === slug);
   const { addItem } = useCart();
 
   const [selectedImage, setSelectedImage] = useState(0);
