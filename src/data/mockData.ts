@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   name: string;
+  slug: string;
   category: string;
   price: number;
   description: string;
@@ -68,6 +69,7 @@ export const products: Product[] = [
   {
     id: '1',
     name: 'Canapé Élégance',
+    slug: 'canape-elegance',
     category: 'Mobilier',
     price: 1850000,
     description: 'Canapé trois places en velours premium avec structure en bois massif',
@@ -85,6 +87,7 @@ export const products: Product[] = [
   {
     id: '2',
     name: 'Table Basse Natura',
+    slug: 'table-basse-natura',
     category: 'Mobilier',
     price: 450000,
     description: 'Table basse en bois de teck recyclé avec finition naturelle',
@@ -102,6 +105,7 @@ export const products: Product[] = [
   {
     id: '3',
     name: 'Lampe Moderne Arc',
+    slug: 'lampe-moderne-arc',
     category: 'Décoration',
     price: 285000,
     description: 'Lampadaire arc moderne en métal doré avec abat-jour en marbre',
@@ -119,6 +123,7 @@ export const products: Product[] = [
   {
     id: '4',
     name: 'Vase Céramique Artisanal',
+    slug: 'vase-ceramique-artisanal',
     category: 'Décoration',
     price: 125000,
     description: 'Vase en céramique fait main avec motifs géométriques',
@@ -136,6 +141,7 @@ export const products: Product[] = [
   {
     id: '5',
     name: 'Tapis Berbère Luxe',
+    slug: 'tapis-berbere-luxe',
     category: 'Textile',
     price: 680000,
     description: 'Tapis berbère authentique tissé main en pure laine',
@@ -153,6 +159,7 @@ export const products: Product[] = [
   {
     id: '6',
     name: 'Coussins Velours Premium',
+    slug: 'coussins-velours-premium',
     category: 'Textile',
     price: 45000,
     description: 'Lot de 2 coussins en velours avec rembourrage plume',
@@ -170,6 +177,7 @@ export const products: Product[] = [
   {
     id: '7',
     name: 'Miroir Soleil Doré',
+    slug: 'miroir-soleil-dore',
     category: 'Accessoires',
     price: 195000,
     description: 'Miroir rond avec cadre en métal doré design soleil',
@@ -187,6 +195,7 @@ export const products: Product[] = [
   {
     id: '8',
     name: 'Fauteuil Lecture Confort',
+    slug: 'fauteuil-lecture-confort',
     category: 'Mobilier',
     price: 895000,
     description: 'Fauteuil ergonomique avec repose-pieds intégré',
@@ -204,6 +213,7 @@ export const products: Product[] = [
   {
     id: '9',
     name: 'Bougeoirs Design Minimaliste',
+    slug: 'bougeoirs-design-minimaliste',
     category: 'Accessoires',
     price: 85000,
     description: 'Ensemble de 3 bougeoirs en laiton brossé',
@@ -221,6 +231,7 @@ export const products: Product[] = [
   {
     id: '10',
     name: 'Plaid Cachemire Luxe',
+    slug: 'plaid-cachemire-luxe',
     category: 'Textile',
     price: 320000,
     description: 'Plaid en cachemire pur avec finitions franges',
@@ -238,6 +249,7 @@ export const products: Product[] = [
   {
     id: '11',
     name: 'Console Entrée Marbre',
+    slug: 'console-entree-marbre',
     category: 'Mobilier',
     price: 1250000,
     description: 'Console en marbre blanc avec piètement doré',
@@ -255,6 +267,7 @@ export const products: Product[] = [
   {
     id: '12',
     name: 'Sculpture Abstraite Bronze',
+    slug: 'sculpture-abstraite-bronze',
     category: 'Décoration',
     price: 425000,
     description: 'Sculpture moderne en bronze patiné sur socle en marbre',

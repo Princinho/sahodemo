@@ -29,7 +29,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <Link to={`/product/${product.id}`}>
+    <Link to={`/product/${product.slug}`}>
       <Card className="group overflow-hidden hover:shadow-large transition-slow cursor-pointer h-full flex flex-col">
         <div className="relative overflow-hidden aspect-[4/3]">
           <img
