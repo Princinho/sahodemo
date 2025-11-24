@@ -52,14 +52,14 @@ export const categories: Category[] = [
     id: '3',
     name: 'Textile',
     description: 'Coussins, rideaux, tapis et linge de maison raffiné',
-    image: 'https://images.unsplash.com/photo-1616627977552-0f8662e48aed?w=800&h=600&fit=crop',
+    image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?auto=format&fit=crop&w=800&h=600&q=80',
     productCount: 15
   },
   {
     id: '4',
     name: 'Accessoires',
     description: 'Petits objets et accessoires pour compléter votre intérieur',
-    image: 'https://images.unsplash.com/photo-1565183928294-7d22f2d4c6de?w=800&h=600&fit=crop',
+    image: 'https://images.unsplash.com/photo-1600210491892-03d54c0aaf87?auto=format&fit=crop&w=800&h=600&q=80',
     productCount: 12
   }
 ];
@@ -209,8 +209,8 @@ export const products: Product[] = [
     description: 'Ensemble de 3 bougeoirs en laiton brossé',
     longDescription: 'Des bougeoirs au design épuré pour une ambiance chaleureuse. Laiton massif avec finition brossée mate. Trois hauteurs différentes pour créer un effet dynamique. Base lestée pour une stabilité parfaite. S\'intègrent aussi bien dans un intérieur moderne que classique.',
     images: [
-      'https://images.unsplash.com/photo-1602932993447-dd5e1e0b9b1b?auto=format&fit=crop&w=800&h=600&q=80',
-      'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&h=600&q=80',
+      'https://images.unsplash.com/photo-1566204773863-cf63e6d4ab88?auto=format&fit=crop&w=800&h=600&q=80',
+      'https://images.unsplash.com/photo-1535231540604-72e8fbaf8cdb?auto=format&fit=crop&w=800&h=600&q=80',
     ],
     material: 'Laiton brossé',
     dimensions: 'H: 15cm, 20cm, 25cm',
