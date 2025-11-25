@@ -42,7 +42,7 @@ const productSchema = z.object({
   longDescription: z.string().trim().min(1, "La description longue est requise"),
   price: z.number().min(0, "Le prix doit être positif"),
   category: z.string().trim().min(1, "La catégorie est requise"),
-  images: z.string().trim().url("URL invalide").min(1, "Au moins une image est requise"),
+  images: z.array(z.string().url("URL invalide")).min(1, "Au moins une image est requise"),
   material: z.string().trim().min(1, "Le matériau est requis"),
   dimensions: z.string().trim().min(1, "Les dimensions sont requises"),
   colors: z.string().trim().min(1, "Au moins une couleur est requise"),
@@ -65,13 +65,14 @@ const Products = () => {
     longDescription: "",
     price: 0,
     category: "",
-    images: "",
+    images: [] as string[],
     material: "",
     dimensions: "",
     colors: "",
     inStock: true,
     featured: false,
   });
+  const [imageUrl, setImageUrl] = useState("");
 
   const filteredProducts = products.filter(
     (p) =>
@@ -103,13 +104,14 @@ const Products = () => {
       longDescription: "",
       price: 0,
       category: "",
-      images: "",
+      images: [],
       material: "",
       dimensions: "",
       colors: "",
       inStock: true,
       featured: false,
     });
+    setImageUrl("");
     setEditingProduct(null);
   };
 
@@ -126,19 +128,96 @@ const Products = () => {
       longDescription: product.longDescription,
       price: product.price,
       category: product.category,
-      images: product.images[0] || "",
+      images: [...product.images],
       material: product.material,
       dimensions: product.dimensions,
       colors: product.colors.join(", "),
       inStock: product.inStock,
       featured: product.featured || false,
     });
+    setImageUrl("");
     setIsDialogOpen(true);
   };
 
   const openDeleteDialog = (productId: string) => {
     setDeletingProductId(productId);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleAddImageUrl = () => {
+    if (!imageUrl.trim()) return;
+    
+    try {
+      new URL(imageUrl);
+      setFormData({ ...formData, images: [...formData.images, imageUrl] });
+      setImageUrl("");
+      toast({
+        title: "Image ajoutée",
+        description: "L'image a été ajoutée avec succès.",
+      });
+    } catch {
+      toast({
+        title: "URL invalide",
+        description: "Veuillez entrer une URL valide.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Type de fichier invalide",
+          description: `${file.name} n'est pas une image.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      try {
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        newImages.push(dataUrl);
+      } catch (error) {
+        toast({
+          title: "Erreur de lecture",
+          description: `Impossible de lire ${file.name}.`,
+          variant: "destructive",
+        });
+      }
+    }
+
+    if (newImages.length > 0) {
+      setFormData({ ...formData, images: [...formData.images, ...newImages] });
+      toast({
+        title: "Images ajoutées",
+        description: `${newImages.length} image(s) ajoutée(s) avec succès.`,
+      });
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setFormData({
+      ...formData,
+      images: formData.images.filter((_, i) => i !== index),
+    });
+    toast({
+      title: "Image supprimée",
+      description: "L'image a été supprimée avec succès.",
+    });
   };
 
   const handleSubmit = () => {
@@ -156,7 +235,7 @@ const Products = () => {
                 longDescription: validatedData.longDescription,
                 price: validatedData.price,
                 category: validatedData.category,
-                images: [validatedData.images],
+                images: validatedData.images,
                 material: validatedData.material,
                 dimensions: validatedData.dimensions,
                 colors: colorsArray,
@@ -178,7 +257,7 @@ const Products = () => {
           longDescription: validatedData.longDescription,
           price: validatedData.price,
           category: validatedData.category,
-          images: [validatedData.images],
+          images: validatedData.images,
           material: validatedData.material,
           dimensions: validatedData.dimensions,
           colors: colorsArray,
@@ -391,14 +470,67 @@ const Products = () => {
               </div>
             </div>
             
-            <div className="grid gap-2">
-              <Label htmlFor="images">URL de l'image</Label>
-              <Input
-                id="images"
-                value={formData.images}
-                onChange={(e) => setFormData({ ...formData, images: e.target.value })}
-                placeholder="https://..."
-              />
+            <div className="grid gap-4">
+              <div>
+                <Label>Images du produit</Label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Ajoutez des images par URL ou en uploadant des fichiers
+                </p>
+                
+                {/* Image gallery */}
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-4 gap-3 mb-3">
+                    {formData.images.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={img}
+                          alt={`Image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveImage(index)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Add by URL */}
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="URL de l'image (https://...)"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddImageUrl();
+                      }
+                    }}
+                  />
+                  <Button type="button" onClick={handleAddImageUrl} variant="outline">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Ajouter
+                  </Button>
+                </div>
+                
+                {/* Upload files */}
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="cursor-pointer"
+                  />
+                </div>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
