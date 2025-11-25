@@ -2,6 +2,10 @@ import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin } from "lucide-react";
 
 export const Footer = () => {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <footer className="bg-primary text-primary-foreground mt-20">
       <div className="container mx-auto px-4 py-12">
@@ -19,22 +23,22 @@ export const Footer = () => {
             <h4 className="font-semibold mb-4">Navigation</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/catalog" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/catalog" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Catalogue
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/about" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   À propos
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/contact" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Contact
                 </Link>
               </li>
               <li>
-                <Link to="/request-product" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/request-product" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Demande spéciale
                 </Link>
               </li>
@@ -46,22 +50,22 @@ export const Footer = () => {
             <h4 className="font-semibold mb-4">Catégories</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/catalog?category=Mobilier" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/catalog?category=Mobilier" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Mobilier
                 </Link>
               </li>
               <li>
-                <Link to="/catalog?category=Décoration" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/catalog?category=Décoration" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Décoration
                 </Link>
               </li>
               <li>
-                <Link to="/catalog?category=Textile" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/catalog?category=Textile" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Textile
                 </Link>
               </li>
               <li>
-                <Link to="/catalog?category=Accessoires" className="opacity-90 hover:opacity-100 transition-smooth">
+                <Link to="/catalog?category=Accessoires" onClick={scrollToTop} className="opacity-90 hover:opacity-100 transition-smooth">
                   Accessoires
                 </Link>
               </li>
