@@ -6,6 +6,12 @@ import { ShoppingCart } from "lucide-react";
 import { Product } from "@/data/mockData";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProductCardProps {
   product: Product;
@@ -61,19 +67,27 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             {product.description}
           </p>
         </CardContent>
-        <CardFooter className="p-4 pt-0 flex items-center justify-between">
-          <div className="text-xl font-bold text-primary">
+        <CardFooter className="p-4 pt-0 flex items-center justify-between gap-2">
+          <div className="text-xl font-bold text-primary flex-1">
             {formatPrice(product.price)}
           </div>
-          <Button
-            size="sm"
-            onClick={handleAddToCart}
-            disabled={!product.inStock}
-            className="shadow-soft hover:shadow-gold transition-smooth"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Sélectionner
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  onClick={handleAddToCart}
+                  disabled={!product.inStock}
+                  className="shadow-soft hover:shadow-gold transition-smooth shrink-0"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Ajouter au panier</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardFooter>
       </Card>
     </Link>
