@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { mockQuoteRequests, products } from "@/data/mockData";
+import { mockQuoteRequests, mockQuoteHistory, mockQuoteNotes, products, QuoteHistory, QuoteNote } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -18,11 +19,107 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Search, Eye, Mail, Phone } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Eye, Mail, Phone, Upload, FileText, Plus, Send, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Quotes = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
+  const [quoteHistory, setQuoteHistory] = useState<QuoteHistory[]>(mockQuoteHistory);
+  const [quoteNotes, setQuoteNotes] = useState<QuoteNote[]>(mockQuoteNotes);
+  const [newNote, setNewNote] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const { toast } = useToast();
+
+  // Fonctions simulées pour l'API
+  const simulateFileUpload = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(URL.createObjectURL(file));
+      }, 1000);
+    });
+  };
+
+  const simulateSendEmail = async (email: string, fileName: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log(`Email simulé envoyé à ${email} avec le fichier ${fileName}`);
+        resolve(true);
+      }, 500);
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploadedFile(e.target.files[0]);
+    }
+  };
+
+  const handleSendQuote = async () => {
+    if (!uploadedFile || !selectedQuote) return;
+
+    try {
+      // Simuler l'upload du fichier
+      const fileUrl = await simulateFileUpload(uploadedFile);
+      
+      // Simuler l'envoi de l'email
+      const emailSent = await simulateSendEmail(selectedQuote.customerEmail, uploadedFile.name);
+
+      // Ajouter à l'historique
+      const newHistory: QuoteHistory = {
+        id: `QH${String(quoteHistory.length + 1).padStart(3, '0')}`,
+        quoteRequestId: selectedQuote.id,
+        fileName: uploadedFile.name,
+        fileUrl,
+        sentDate: new Date().toLocaleString('fr-FR'),
+        sentBy: 'Admin',
+        emailSent
+      };
+
+      setQuoteHistory([...quoteHistory, newHistory]);
+      setUploadedFile(null);
+
+      toast({
+        title: "Devis envoyé",
+        description: `Le devis a été envoyé avec succès à ${selectedQuote.customerEmail}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'envoi du devis",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddNote = () => {
+    if (!newNote.trim() || !selectedQuote) return;
+
+    const note: QuoteNote = {
+      id: `QN${String(quoteNotes.length + 1).padStart(3, '0')}`,
+      quoteRequestId: selectedQuote.id,
+      content: newNote,
+      createdDate: new Date().toLocaleString('fr-FR'),
+      createdBy: 'Admin'
+    };
+
+    setQuoteNotes([...quoteNotes, note]);
+    setNewNote("");
+
+    toast({
+      title: "Note ajoutée",
+      description: "La note a été ajoutée avec succès",
+    });
+  };
+
+  const getQuoteHistory = (quoteId: string) => {
+    return quoteHistory.filter(h => h.quoteRequestId === quoteId);
+  };
+
+  const getQuoteNotes = (quoteId: string) => {
+    return quoteNotes.filter(n => n.quoteRequestId === quoteId);
+  };
 
   const filteredQuotes = mockQuoteRequests.filter(
     (q) =>
@@ -146,94 +243,218 @@ const Quotes = () => {
 
       {/* Quote Detail Dialog */}
       <Dialog open={!!selectedQuote} onOpenChange={() => setSelectedQuote(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           {selectedQuote && (
             <>
               <DialogHeader>
                 <DialogTitle>Demande de Devis #{selectedQuote.id}</DialogTitle>
                 <DialogDescription>
-                  Reçue le {selectedQuote.date}
+                  Reçue le {selectedQuote.date} - {getStatusBadge(selectedQuote.status)}
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-6">
-                {/* Customer Info */}
-                <div>
-                  <h3 className="font-semibold mb-3">Informations Client</h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>Nom:</strong> {selectedQuote.customerName}
-                    </p>
-                    <p>
-                      <strong>Email:</strong> {selectedQuote.customerEmail}
-                    </p>
-                    <p>
-                      <strong>Téléphone:</strong> {selectedQuote.customerPhone}
-                    </p>
-                    {selectedQuote.company && (
-                      <p>
-                        <strong>Entreprise:</strong> {selectedQuote.company}
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="details">Détails</TabsTrigger>
+                  <TabsTrigger value="quotes">
+                    Devis ({getQuoteHistory(selectedQuote.id).length})
+                  </TabsTrigger>
+                  <TabsTrigger value="notes">
+                    Notes ({getQuoteNotes(selectedQuote.id).length})
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Onglet Détails */}
+                <TabsContent value="details" className="space-y-6">
+                  {/* Customer Info */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Informations Client</h3>
+                    <div className="space-y-2 text-sm">
+                      <p><strong>Nom:</strong> {selectedQuote.customerName}</p>
+                      <p><strong>Email:</strong> {selectedQuote.customerEmail}</p>
+                      <p><strong>Téléphone:</strong> {selectedQuote.customerPhone}</p>
+                      {selectedQuote.company && (
+                        <p><strong>Entreprise:</strong> {selectedQuote.company}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Products */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Produits Demandés</h3>
+                    <div className="space-y-3">
+                      {selectedQuote.products.map((item: any) => {
+                        const product = products.find((p) => p.id === item.productId);
+                        return product ? (
+                          <div key={item.productId} className="flex gap-3 p-3 border rounded-lg">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Quantité: {item.quantity}
+                              </p>
+                              <p className="text-sm font-semibold text-primary">
+                                {formatPrice(product.price * item.quantity)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Message */}
+                  {selectedQuote.message && (
+                    <div>
+                      <h3 className="font-semibold mb-3">Message du Client</h3>
+                      <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
+                        {selectedQuote.message}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center text-lg font-bold">
+                      <span>Total Indicatif</span>
+                      <span className="text-primary">
+                        {formatPrice(calculateQuoteTotal(selectedQuote))}
+                      </span>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Onglet Devis */}
+                <TabsContent value="quotes" className="space-y-6">
+                  {/* Envoi de nouveau devis */}
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Envoyer un nouveau devis
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Fichier PDF du devis
+                        </label>
+                        <Input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handleFileChange}
+                          className="cursor-pointer"
+                        />
+                        {uploadedFile && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Fichier sélectionné: {uploadedFile.name}
+                          </p>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={handleSendQuote}
+                        disabled={!uploadedFile}
+                        className="w-full"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Envoyer le devis par email
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Historique des devis */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Historique des devis envoyés</h3>
+                    {getQuoteHistory(selectedQuote.id).length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Aucun devis envoyé pour le moment
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {getQuoteHistory(selectedQuote.id).map((history) => (
+                          <div
+                            key={history.id}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-8 w-8 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium text-sm">{history.fileName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Envoyé le {history.sentDate} par {history.sentBy}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {history.emailSent && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  Envoyé
+                                </Badge>
+                              )}
+                              <Button variant="ghost" size="icon">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                </div>
+                </TabsContent>
 
-                {/* Products */}
-                <div>
-                  <h3 className="font-semibold mb-3">Produits Demandés</h3>
-                  <div className="space-y-3">
-                    {selectedQuote.products.map((item: any) => {
-                      const product = products.find((p) => p.id === item.productId);
-                      return product ? (
-                        <div key={item.productId} className="flex gap-3 p-3 border rounded-lg">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Quantité: {item.quantity}
-                            </p>
-                            <p className="text-sm font-semibold text-primary">
-                              {formatPrice(product.price * item.quantity)}
+                {/* Onglet Notes */}
+                <TabsContent value="notes" className="space-y-6">
+                  {/* Ajout de note */}
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Plus className="h-5 w-5" />
+                      Ajouter une note
+                    </h3>
+                    <Textarea
+                      placeholder="Écrivez une note pour suivre ce client..."
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      rows={3}
+                    />
+                    <Button
+                      onClick={handleAddNote}
+                      disabled={!newNote.trim()}
+                      className="w-full"
+                    >
+                      Ajouter la note
+                    </Button>
+                  </div>
+
+                  {/* Liste des notes */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Notes de suivi</h3>
+                    {getQuoteNotes(selectedQuote.id).length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Aucune note pour le moment
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {getQuoteNotes(selectedQuote.id).map((note) => (
+                          <div
+                            key={note.id}
+                            className="p-3 border rounded-lg bg-muted/30"
+                          >
+                            <p className="text-sm mb-2">{note.content}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {note.createdDate} - {note.createdBy}
                             </p>
                           </div>
-                        </div>
-                      ) : null;
-                    })}
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Message */}
-                {selectedQuote.message && (
-                  <div>
-                    <h3 className="font-semibold mb-3">Message du Client</h3>
-                    <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
-                      {selectedQuote.message}
-                    </p>
-                  </div>
-                )}
-
-                {/* Total */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center text-lg font-bold">
-                    <span>Total Indicatif</span>
-                    <span className="text-primary">
-                      {formatPrice(calculateQuoteTotal(selectedQuote))}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <Button className="flex-1">Envoyer un Devis</Button>
-                  <Button variant="outline" className="flex-1">
-                    Contacter le Client
-                  </Button>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
             </>
           )}
         </DialogContent>
