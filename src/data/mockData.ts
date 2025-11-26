@@ -34,6 +34,24 @@ export interface QuoteRequest {
   date: string;
 }
 
+export interface QuoteHistory {
+  id: string;
+  quoteRequestId: string;
+  fileName: string;
+  fileUrl: string;
+  sentDate: string;
+  sentBy: string;
+  emailSent: boolean;
+}
+
+export interface QuoteNote {
+  id: string;
+  quoteRequestId: string;
+  content: string;
+  createdDate: string;
+  createdBy: string;
+}
+
 export const categories: Category[] = [
   {
     id: '1',
@@ -322,5 +340,50 @@ export const mockQuoteRequests: QuoteRequest[] = [
     ],
     status: 'completed',
     date: '2024-01-10'
+  }
+];
+
+export const mockQuoteHistory: QuoteHistory[] = [
+  {
+    id: 'QH001',
+    quoteRequestId: 'Q002',
+    fileName: 'Devis_Hotel_Prestige_v1.pdf',
+    fileUrl: '#',
+    sentDate: '2024-01-14 14:30',
+    sentBy: 'Admin',
+    emailSent: true
+  },
+  {
+    id: 'QH002',
+    quoteRequestId: 'Q003',
+    fileName: 'Devis_A_Traore.pdf',
+    fileUrl: '#',
+    sentDate: '2024-01-11 09:15',
+    sentBy: 'Admin',
+    emailSent: true
+  }
+];
+
+export const mockQuoteNotes: QuoteNote[] = [
+  {
+    id: 'QN001',
+    quoteRequestId: 'Q002',
+    content: 'Client demande une remise pour commande groupée. À discuter.',
+    createdDate: '2024-01-14 10:00',
+    createdBy: 'Admin'
+  },
+  {
+    id: 'QN002',
+    quoteRequestId: 'Q002',
+    content: 'Remise de 15% accordée. Devis envoyé.',
+    createdDate: '2024-01-14 14:25',
+    createdBy: 'Admin'
+  },
+  {
+    id: 'QN003',
+    quoteRequestId: 'Q003',
+    content: 'Client régulier. Livraison gratuite offerte.',
+    createdDate: '2024-01-10 16:45',
+    createdBy: 'Admin'
   }
 ];
