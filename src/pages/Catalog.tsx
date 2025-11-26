@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { products, categories } from "@/data/mockData";
 import { ProductCard } from "@/components/ProductCard";
@@ -20,6 +20,17 @@ const Catalog = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [sortBy, setSortBy] = useState<string>("featured");
+
+  // Update selected category when URL parameter changes
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    } else {
+      setSelectedCategory("all");
+    }
+    // Scroll to top when category changes from URL
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [categoryParam]);
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = [...products];
