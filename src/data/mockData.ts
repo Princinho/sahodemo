@@ -50,6 +50,8 @@ export interface QuoteNote {
   content: string;
   createdDate: string;
   createdBy: string;
+  fileName?: string;
+  fileUrl?: string;
 }
 
 export const categories: Category[] = [
