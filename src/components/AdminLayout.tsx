@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Package, FileText, LogOut, LayoutDashboard } from "lucide-react";
+import { Home, Package, FileText, LogOut, LayoutDashboard, FolderOpen } from "lucide-react";
 
 export const AdminLayout = () => {
   const location = useLocation();
@@ -40,6 +40,18 @@ export const AdminLayout = () => {
             >
               <Package className="mr-2 h-4 w-4" />
               Produits
+            </Button>
+          </Link>
+
+          <Link to="/admin/categories">
+            <Button
+              variant={isActive("/admin/categories") ? "secondary" : "ghost"}
+              className={`w-full justify-start ${
+                isActive("/admin/categories") ? "bg-primary-foreground text-primary" : "text-primary-foreground hover:bg-primary-foreground/10"
+              }`}
+            >
+              <FolderOpen className="mr-2 h-4 w-4" />
+              Catégories
             </Button>
           </Link>
 
