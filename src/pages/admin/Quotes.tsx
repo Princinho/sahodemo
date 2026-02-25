@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { mockQuoteRequests, mockQuoteHistory, mockQuoteNotes, products, QuoteHistory, QuoteNote } from "@/data/mockData";
+import { mockQuoteRequests, mockQuoteNotes, products, QuoteNote } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 const Quotes = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
-  const [quoteHistory, setQuoteHistory] = useState<QuoteHistory[]>(mockQuoteHistory);
+  
   const [quoteNotes, setQuoteNotes] = useState<QuoteNote[]>(mockQuoteNotes);
   const [newNote, setNewNote] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -56,66 +56,46 @@ const Quotes = () => {
     }
   };
 
-  const handleSendQuote = async () => {
-    if (!uploadedFile || !selectedQuote) return;
-
-    try {
-      // Simuler l'upload du fichier
-      const fileUrl = await simulateFileUpload(uploadedFile);
-      
-      // Simuler l'envoi de l'email
-      const emailSent = await simulateSendEmail(selectedQuote.customerEmail, uploadedFile.name);
-
-      // Ajouter à l'historique
-      const newHistory: QuoteHistory = {
-        id: `QH${String(quoteHistory.length + 1).padStart(3, '0')}`,
-        quoteRequestId: selectedQuote.id,
-        fileName: uploadedFile.name,
-        fileUrl,
-        sentDate: new Date().toLocaleString('fr-FR'),
-        sentBy: 'Admin',
-        emailSent
-      };
-
-      setQuoteHistory([...quoteHistory, newHistory]);
-      setUploadedFile(null);
-
-      toast({
-        title: "Devis envoyé",
-        description: `Le devis a été envoyé avec succès à ${selectedQuote.customerEmail}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de l'envoi du devis",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNote.trim() || !selectedQuote) return;
+
+    let fileUrl: string | undefined;
+    let fileName: string | undefined;
+
+    if (uploadedFile) {
+      try {
+        fileUrl = await simulateFileUpload(uploadedFile);
+        fileName = uploadedFile.name;
+        await simulateSendEmail(selectedQuote.customerEmail, uploadedFile.name);
+      } catch {
+        toast({ title: "Erreur", description: "Erreur lors de l'upload du fichier", variant: "destructive" });
+        return;
+      }
+    }
 
     const note: QuoteNote = {
       id: `QN${String(quoteNotes.length + 1).padStart(3, '0')}`,
       quoteRequestId: selectedQuote.id,
       content: newNote,
       createdDate: new Date().toLocaleString('fr-FR'),
-      createdBy: 'Admin'
+      createdBy: 'Admin',
+      fileName,
+      fileUrl,
     };
 
     setQuoteNotes([...quoteNotes, note]);
     setNewNote("");
+    setUploadedFile(null);
 
     toast({
-      title: "Note ajoutée",
-      description: "La note a été ajoutée avec succès",
+      title: uploadedFile ? "Note et devis ajoutés" : "Note ajoutée",
+      description: uploadedFile
+        ? `La note et le devis ont été envoyés à ${selectedQuote.customerEmail}`
+        : "La note a été ajoutée avec succès",
     });
   };
 
-  const getQuoteHistory = (quoteId: string) => {
-    return quoteHistory.filter(h => h.quoteRequestId === quoteId);
-  };
+  
 
   const getQuoteNotes = (quoteId: string) => {
     return quoteNotes.filter(n => n.quoteRequestId === quoteId);
@@ -254,13 +234,10 @@ const Quotes = () => {
               </DialogHeader>
 
               <Tabs defaultValue="details" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="details">Détails</TabsTrigger>
-                  <TabsTrigger value="quotes">
-                    Devis ({getQuoteHistory(selectedQuote.id).length})
-                  </TabsTrigger>
-                  <TabsTrigger value="notes">
-                    Notes ({getQuoteNotes(selectedQuote.id).length})
+                  <TabsTrigger value="suivi">
+                    Suivi ({getQuoteNotes(selectedQuote.id).length})
                   </TabsTrigger>
                 </TabsList>
 
@@ -328,87 +305,8 @@ const Quotes = () => {
                   </div>
                 </TabsContent>
 
-                {/* Onglet Devis */}
-                <TabsContent value="quotes" className="space-y-6">
-                  {/* Envoi de nouveau devis */}
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Upload className="h-5 w-5" />
-                      Envoyer un nouveau devis
-                    </h3>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">
-                          Fichier PDF du devis
-                        </label>
-                        <Input
-                          type="file"
-                          accept=".pdf"
-                          onChange={handleFileChange}
-                          className="cursor-pointer"
-                        />
-                        {uploadedFile && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Fichier sélectionné: {uploadedFile.name}
-                          </p>
-                        )}
-                      </div>
-
-                      <Button
-                        onClick={handleSendQuote}
-                        disabled={!uploadedFile}
-                        className="w-full"
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Envoyer le devis par email
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Historique des devis */}
-                  <div>
-                    <h3 className="font-semibold mb-3">Historique des devis envoyés</h3>
-                    {getQuoteHistory(selectedQuote.id).length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        Aucun devis envoyé pour le moment
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {getQuoteHistory(selectedQuote.id).map((history) => (
-                          <div
-                            key={history.id}
-                            className="flex items-center justify-between p-3 border rounded-lg"
-                          >
-                            <div className="flex items-center gap-3">
-                              <FileText className="h-8 w-8 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium text-sm">{history.fileName}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Envoyé le {history.sentDate} par {history.sentBy}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {history.emailSent && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Mail className="h-3 w-3 mr-1" />
-                                  Envoyé
-                                </Badge>
-                              )}
-                              <Button variant="ghost" size="icon">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                {/* Onglet Notes */}
-                <TabsContent value="notes" className="space-y-6">
+                {/* Onglet Suivi */}
+                <TabsContent value="suivi" className="space-y-6">
                   {/* Ajout de note */}
                   <div className="border rounded-lg p-4 space-y-3">
                     <h3 className="font-semibold flex items-center gap-2">
@@ -421,18 +319,35 @@ const Quotes = () => {
                       onChange={(e) => setNewNote(e.target.value)}
                       rows={3}
                     />
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Devis en pièce jointe (optionnel)
+                      </label>
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleFileChange}
+                        className="cursor-pointer"
+                      />
+                      {uploadedFile && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Fichier sélectionné: {uploadedFile.name}
+                        </p>
+                      )}
+                    </div>
                     <Button
                       onClick={handleAddNote}
                       disabled={!newNote.trim()}
                       className="w-full"
                     >
-                      Ajouter la note
+                      <Send className="h-4 w-4 mr-2" />
+                      {uploadedFile ? "Ajouter la note et envoyer le devis" : "Ajouter la note"}
                     </Button>
                   </div>
 
-                  {/* Liste des notes */}
+                  {/* Historique des notes et devis */}
                   <div>
-                    <h3 className="font-semibold mb-3">Notes de suivi</h3>
+                    <h3 className="font-semibold mb-3">Historique de suivi</h3>
                     {getQuoteNotes(selectedQuote.id).length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-8">
                         Aucune note pour le moment
@@ -445,7 +360,20 @@ const Quotes = () => {
                             className="p-3 border rounded-lg bg-muted/30"
                           >
                             <p className="text-sm mb-2">{note.content}</p>
-                            <p className="text-xs text-muted-foreground">
+                            {note.fileName && (
+                              <div className="flex items-center gap-2 mt-2 p-2 border rounded bg-background">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium flex-1">{note.fileName}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  Envoyé
+                                </Badge>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
                               {note.createdDate} - {note.createdBy}
                             </p>
                           </div>
