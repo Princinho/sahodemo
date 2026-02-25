@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart } from "lucide-react";
-import { Product } from "@/data/mockData";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
 import {
@@ -12,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Product } from "@/models/Product";
 
 interface ProductCardProps {
   product: Product;
@@ -35,20 +35,20 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <Link to={`/product/${product.slug}`}>
+    <Link to={`/product/${product.id}`}>
       <Card className="group overflow-hidden hover:shadow-large transition-slow cursor-pointer h-full flex flex-col">
         <div className="relative overflow-hidden aspect-[4/3]">
           <img
-            src={product.images[0]}
+            src={product.imageUrls[0]}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-slow"
           />
-          {product.featured && (
+          {product.isTrending && (
             <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground shadow-gold">
               En vedette
             </Badge>
           )}
-          {!product.inStock && (
+          {!(product.quantity>0) && (
             <Badge className="absolute top-3 right-3 bg-destructive text-destructive-foreground">
               Rupture
             </Badge>
@@ -69,7 +69,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </CardContent>
         <CardFooter className="p-4 pt-0 flex items-center justify-between gap-2">
           <div className="text-xl font-bold text-primary flex-1">
-            {formatPrice(product.price)}
+            {formatPrice(Number(product.price))}
           </div>
           <TooltipProvider>
             <Tooltip>
@@ -77,7 +77,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 <Button
                   size="icon"
                   onClick={handleAddToCart}
-                  disabled={!product.inStock}
+                  disabled={!(product.quantity>0)}
                   className="shadow-soft hover:shadow-gold transition-smooth shrink-0"
                 >
                   <ShoppingCart className="h-4 w-4" />

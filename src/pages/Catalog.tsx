@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { products, categories } from "@/data/mockData";
+import { categories } from "@/data/mockData";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, SlidersHorizontal } from "lucide-react";
+import { Product } from "@/models/Product";
+import { getAllProducts } from "@/api/api";
 
 const Catalog = () => {
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get("category");
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [sortBy, setSortBy] = useState<string>("featured");
-
+  const [products, setProducts] = useState<Product[]>([])
   // Update selected category when URL parameter changes
   useEffect(() => {
     if (categoryParam) {
@@ -32,9 +34,14 @@ const Catalog = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [categoryParam]);
 
+  useEffect(() => {
+    getAllProducts().then(data => setProducts(data))
+  }, []);
+
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = [...products];
 
+    console.log(selectedCategory)
     // Filter by category
     if (selectedCategory && selectedCategory !== "all") {
       filtered = filtered.filter((p) => p.category === selectedCategory);
@@ -63,14 +70,13 @@ const Catalog = () => {
       case "featured":
       default:
         filtered.sort((a, b) => {
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
+          if (a.isTrending && !b.isTrending) return -1;
+          if (!a.isTrending && b.isTrending) return 1;
           return 0;
         });
     }
-
     return filtered;
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, searchQuery, sortBy,products]);
 
   return (
     <div className="min-h-screen py-8">
@@ -89,7 +95,7 @@ const Catalog = () => {
             <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Filtres et Recherche</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="relative">

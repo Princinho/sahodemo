@@ -101,7 +101,7 @@ const Home = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-20 bg-muted/30">
+      {/* <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Produits en Vedette</h2>
@@ -123,7 +123,7 @@ const Home = () => {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
