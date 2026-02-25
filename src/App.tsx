@@ -21,6 +21,7 @@ import Contact from "./pages/Contact";
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import Quotes from "./pages/admin/Quotes";
+import Categories from "./pages/admin/Categories";
 
 import NotFound from "./pages/NotFound";
 
@@ -112,6 +113,7 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="products" element={<Products />} />
             <Route path="quotes" element={<Quotes />} />
+            <Route path="categories" element={<Categories />} />
           </Route>
 
           {/* Catch-all 404 Route */}
