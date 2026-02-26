@@ -1,300 +1,157 @@
-import { useState } from "react";
-import { products as initialProducts } from "@/data/mockData";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Search, Plus, Edit, Trash2, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
-
-const productSchema = z.object({
-  name: z.string().trim().min(1, "Le nom est requis").max(100),
-  description: z.string().trim().min(1, "La description est requise").max(500),
-  longDescription: z.string().trim().min(1, "La description longue est requise"),
-  price: z.number().min(0, "Le prix doit être positif"),
-  category: z.string().trim().min(1, "La catégorie est requise"),
-  images: z.array(z.string().url("URL invalide")).min(1, "Au moins une image est requise"),
-  material: z.string().trim().min(1, "Le matériau est requis"),
-  dimensions: z.string().trim().min(1, "Les dimensions sont requises"),
-  colors: z.string().trim().min(1, "Au moins une couleur est requise"),
-  inStock: z.boolean(),
-  featured: z.boolean(),
-});
+import { Product } from "@/models/Product";
+import { productsApi } from "@/api/productsApi";
+import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<typeof products[0] | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const { toast } = useToast();
-  
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    longDescription: "",
+    descriptionFull: "",
     price: 0,
-    category: "",
-    images: [] as string[],
-    material: "",
-    dimensions: "",
+    quantity: 0,
+    categoryIds: [] as string[],
+    materials: "",
     colors: "",
-    inStock: true,
-    featured: false,
+    dimensions: "",
+    weight: "",
+    isTrending: false,
+    isDisabled: false,
   });
-  const [imageUrl, setImageUrl] = useState("");
+
+  const fetchProducts = () => {
+    productsApi.getAll({ limit: 100, isDisabled: true }).then((res) => setProducts(res.items)).catch(() => {
+      toast({ title: "Erreur", description: "Impossible de charger les produits", variant: "destructive" });
+    });
+  };
+
+  useEffect(() => {
+    fetchProducts();
+    categoriesApi.getAll({ limit: 200 }).then((res) => setCategories(res.items)).catch(() => {});
+  }, []);
 
   const filteredProducts = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase())
+    (p) => p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XOF",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const createSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", minimumFractionDigits: 0 }).format(price);
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
-      longDescription: "",
-      price: 0,
-      category: "",
-      images: [],
-      material: "",
-      dimensions: "",
-      colors: "",
-      inStock: true,
-      featured: false,
+      name: "", description: "", descriptionFull: "", price: 0, quantity: 0,
+      categoryIds: [], materials: "", colors: "", dimensions: "", weight: "",
+      isTrending: false, isDisabled: false,
     });
-    setImageUrl("");
+    setImageFiles([]);
     setEditingProduct(null);
   };
 
-  const openAddDialog = () => {
-    resetForm();
-    setIsDialogOpen(true);
-  };
+  const openAddDialog = () => { resetForm(); setIsDialogOpen(true); };
 
-  const openEditDialog = (product: typeof products[0]) => {
+  const openEditDialog = (product: Product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
       description: product.description,
-      longDescription: product.longDescription,
+      descriptionFull: product.descriptionFull || "",
       price: product.price,
-      category: product.category,
-      images: [...product.images],
-      material: product.material,
-      dimensions: product.dimensions,
-      colors: product.colors.join(", "),
-      inStock: product.inStock,
-      featured: product.featured || false,
+      quantity: product.quantity,
+      categoryIds: product.categoryIds || [],
+      materials: product.materials?.join(", ") || "",
+      colors: product.colors?.join(", ") || "",
+      dimensions: product.dimensions || "",
+      weight: product.weight || "",
+      isTrending: product.isTrending,
+      isDisabled: product.isDisabled,
     });
-    setImageUrl("");
+    setImageFiles([]);
     setIsDialogOpen(true);
   };
 
-  const openDeleteDialog = (productId: string) => {
-    setDeletingProductId(productId);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleAddImageUrl = () => {
-    if (!imageUrl.trim()) return;
-    
+  const handleSubmit = async () => {
+    if (!formData.name.trim()) {
+      toast({ title: "Erreur", description: "Le nom est requis", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
     try {
-      new URL(imageUrl);
-      setFormData({ ...formData, images: [...formData.images, imageUrl] });
-      setImageUrl("");
-      toast({
-        title: "Image ajoutée",
-        description: "L'image a été ajoutée avec succès.",
-      });
-    } catch {
-      toast({
-        title: "URL invalide",
-        description: "Veuillez entrer une URL valide.",
-        variant: "destructive",
-      });
-    }
-  };
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        descriptionFull: formData.descriptionFull,
+        price: formData.price,
+        quantity: formData.quantity,
+        categoryIds: formData.categoryIds,
+        materials: formData.materials.split(",").map((m) => m.trim()).filter(Boolean),
+        colors: formData.colors.split(",").map((c) => c.trim()).filter(Boolean),
+        dimensions: formData.dimensions || undefined,
+        weight: formData.weight || undefined,
+        isTrending: formData.isTrending,
+        isDisabled: formData.isDisabled,
+      };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const newImages: string[] = [];
-    
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Type de fichier invalide",
-          description: `${file.name} n'est pas une image.`,
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      try {
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        
-        newImages.push(dataUrl);
-      } catch (error) {
-        toast({
-          title: "Erreur de lecture",
-          description: `Impossible de lire ${file.name}.`,
-          variant: "destructive",
-        });
-      }
-    }
-
-    if (newImages.length > 0) {
-      setFormData({ ...formData, images: [...formData.images, ...newImages] });
-      toast({
-        title: "Images ajoutées",
-        description: `${newImages.length} image(s) ajoutée(s) avec succès.`,
-      });
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setFormData({
-      ...formData,
-      images: formData.images.filter((_, i) => i !== index),
-    });
-    toast({
-      title: "Image supprimée",
-      description: "L'image a été supprimée avec succès.",
-    });
-  };
-
-  const handleSubmit = () => {
-    try {
-      const validatedData = productSchema.parse(formData);
-      const colorsArray = validatedData.colors.split(",").map(c => c.trim());
-      
       if (editingProduct) {
-        setProducts(products.map(p => 
-          p.id === editingProduct.id 
-            ? {
-                ...p,
-                name: validatedData.name,
-                description: validatedData.description,
-                longDescription: validatedData.longDescription,
-                price: validatedData.price,
-                category: validatedData.category,
-                images: validatedData.images,
-                material: validatedData.material,
-                dimensions: validatedData.dimensions,
-                colors: colorsArray,
-                inStock: validatedData.inStock,
-                featured: validatedData.featured,
-                slug: createSlug(validatedData.name),
-              }
-            : p
-        ));
-        toast({
-          title: "Produit modifié",
-          description: "Le produit a été modifié avec succès.",
-        });
+        await productsApi.update(editingProduct.id, productData, imageFiles.length > 0 ? imageFiles : undefined);
+        toast({ title: "Produit modifié" });
       } else {
-        const newProduct = {
-          id: String(Math.max(...products.map(p => parseInt(p.id))) + 1),
-          name: validatedData.name,
-          description: validatedData.description,
-          longDescription: validatedData.longDescription,
-          price: validatedData.price,
-          category: validatedData.category,
-          images: validatedData.images,
-          material: validatedData.material,
-          dimensions: validatedData.dimensions,
-          colors: colorsArray,
-          inStock: validatedData.inStock,
-          featured: validatedData.featured,
-          slug: createSlug(validatedData.name),
-        };
-        setProducts([...products, newProduct]);
-        toast({
-          title: "Produit ajouté",
-          description: "Le produit a été ajouté avec succès.",
-        });
+        await productsApi.create(productData, imageFiles.length > 0 ? imageFiles : undefined);
+        toast({ title: "Produit ajouté" });
       }
-      
       setIsDialogOpen(false);
       resetForm();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Erreur de validation",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      }
+      fetchProducts();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.response?.data?.error || "Une erreur est survenue", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    if (deletingProductId) {
-      setProducts(products.filter(p => p.id !== deletingProductId));
-      toast({
-        title: "Produit supprimé",
-        description: "Le produit a été supprimé avec succès.",
-      });
-      setIsDeleteDialogOpen(false);
-      setDeletingProductId(null);
-    }
+  const handleDelete = async () => {
+    // Note: The API doc doesn't show a delete product endpoint
+    // For now we just close the dialog
+    toast({ title: "Info", description: "La suppression de produits n'est pas encore supportée par l'API" });
+    setIsDeleteDialogOpen(false);
+    setDeletingProductId(null);
+  };
+
+  const handleCategoryToggle = (catId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      categoryIds: prev.categoryIds.includes(catId)
+        ? prev.categoryIds.filter((id) => id !== catId)
+        : [...prev.categoryIds, catId],
+    }));
   };
 
   return (
@@ -302,9 +159,7 @@ const Products = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Gestion des Produits</h1>
-          <p className="text-muted-foreground mt-1">
-            {filteredProducts.length} produit(s) au total
-          </p>
+          <p className="text-muted-foreground mt-1">{filteredProducts.length} produit(s) au total</p>
         </div>
         <Button onClick={openAddDialog} className="shadow-gold">
           <Plus className="mr-2 h-4 w-4" />
@@ -312,26 +167,17 @@ const Products = () => {
         </Button>
       </div>
 
-      {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Rechercher un produit..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+        <Input type="text" placeholder="Rechercher un produit..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
       </div>
 
-      {/* Products Table */}
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Image</TableHead>
               <TableHead>Nom</TableHead>
-              <TableHead>Catégorie</TableHead>
               <TableHead>Prix</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Statut</TableHead>
@@ -342,54 +188,34 @@ const Products = () => {
             {filteredProducts.map((product) => (
               <TableRow key={product.id}>
                 <TableCell>
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-12 h-12 object-cover rounded"
-                  />
+                  <img src={product.imageUrls?.[0] || "/placeholder.svg"} alt={product.name} className="w-12 h-12 object-cover rounded" />
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.category}</TableCell>
                 <TableCell>{formatPrice(product.price)}</TableCell>
                 <TableCell>
-                  {product.inStock ? (
+                  {product.quantity > 0 ? (
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      En stock
+                      {product.quantity} en stock
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                      Rupture
-                    </Badge>
+                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rupture</Badge>
                   )}
                 </TableCell>
                 <TableCell>
-                  {product.featured && (
-                    <Badge className="bg-accent text-accent-foreground">
-                      Vedette
-                    </Badge>
-                  )}
+                  <div className="flex gap-1">
+                    {product.isTrending && <Badge className="bg-accent text-accent-foreground">Vedette</Badge>}
+                    {product.isDisabled && <Badge variant="outline">Désactivé</Badge>}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Link to={`/product/${product.slug}`} target="_blank">
-                      <Button variant="ghost" size="icon" title="Aperçu">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    <Link to={`/product/${product.id}`} target="_blank">
+                      <Button variant="ghost" size="icon" title="Aperçu"><Eye className="h-4 w-4" /></Button>
                     </Link>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => openEditDialog(product)}
-                      title="Modifier"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} title="Modifier">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => openDeleteDialog(product.id)}
-                      title="Supprimer"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => { setDeletingProductId(product.id); setIsDeleteDialogOpen(true); }} title="Supprimer">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -400,221 +226,118 @@ const Products = () => {
         </Table>
       </div>
 
-      {/* Add/Edit Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Modifier le produit" : "Ajouter un produit"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingProduct 
-                ? "Modifiez les informations du produit ci-dessous."
-                : "Remplissez les informations du nouveau produit."}
-            </DialogDescription>
+            <DialogTitle>{editingProduct ? "Modifier le produit" : "Ajouter un produit"}</DialogTitle>
+            <DialogDescription>{editingProduct ? "Modifiez les informations du produit." : "Remplissez les informations du nouveau produit."}</DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nom du produit</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Table basse Natura"
-              />
+              <Label>Nom du produit</Label>
+              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ex: Table basse Natura" />
             </div>
-            
+
             <div className="grid gap-2">
-              <Label htmlFor="description">Description courte</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Description courte du produit..."
-                rows={2}
-              />
+              <Label>Description courte</Label>
+              <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} />
             </div>
-            
+
             <div className="grid gap-2">
-              <Label htmlFor="longDescription">Description longue</Label>
-              <Textarea
-                id="longDescription"
-                value={formData.longDescription}
-                onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
-                placeholder="Description détaillée du produit..."
-                rows={3}
-              />
+              <Label>Description longue</Label>
+              <Textarea value={formData.descriptionFull} onChange={(e) => setFormData({ ...formData, descriptionFull: e.target.value })} rows={3} />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="price">Prix (XOF)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0"
-                />
+                <Label>Prix (XOF)</Label>
+                <Input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} />
               </div>
-              
               <div className="grid gap-2">
-                <Label htmlFor="category">Catégorie</Label>
-                <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="Ex: Mobilier"
-                />
+                <Label>Quantité en stock</Label>
+                <Input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })} />
               </div>
             </div>
-            
-            <div className="grid gap-4">
-              <div>
-                <Label>Images du produit</Label>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Ajoutez des images par URL ou en uploadant des fichiers
-                </p>
-                
-                {/* Image gallery */}
-                {formData.images.length > 0 && (
-                  <div className="grid grid-cols-4 gap-3 mb-3">
-                    {formData.images.map((img, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={img}
-                          alt={`Image ${index + 1}`}
-                          className="w-full h-24 object-cover rounded border"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleRemoveImage(index)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Add by URL */}
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="URL de l'image (https://...)"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddImageUrl();
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={handleAddImageUrl} variant="outline">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Ajouter
-                  </Button>
-                </div>
-                
-                {/* Upload files */}
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
+
+            <div className="grid gap-2">
+              <Label>Catégories</Label>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => (
+                  <Badge
+                    key={cat.id}
+                    variant={formData.categoryIds.includes(cat.id) ? "default" : "outline"}
                     className="cursor-pointer"
-                  />
-                </div>
+                    onClick={() => handleCategoryToggle(cat.id)}
+                  >
+                    {cat.name}
+                  </Badge>
+                ))}
               </div>
             </div>
-            
+
+            <div className="grid gap-2">
+              <Label>Images</Label>
+              {editingProduct?.imageUrls?.length > 0 && (
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {editingProduct.imageUrls.map((url, i) => (
+                    <img key={i} src={url} alt="" className="w-full h-20 object-cover rounded border" />
+                  ))}
+                </div>
+              )}
+              <Input type="file" accept="image/*" multiple onChange={(e) => setImageFiles(Array.from(e.target.files || []))} className="cursor-pointer" />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="material">Matériau</Label>
-                <Input
-                  id="material"
-                  value={formData.material}
-                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                  placeholder="Ex: Bois de chêne"
-                />
+                <Label>Matériaux (séparés par virgule)</Label>
+                <Input value={formData.materials} onChange={(e) => setFormData({ ...formData, materials: e.target.value })} placeholder="Bois, Métal" />
               </div>
-              
               <div className="grid gap-2">
-                <Label htmlFor="dimensions">Dimensions</Label>
-                <Input
-                  id="dimensions"
-                  value={formData.dimensions}
-                  onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-                  placeholder="Ex: 120x60x45 cm"
-                />
+                <Label>Couleurs (séparées par virgule)</Label>
+                <Input value={formData.colors} onChange={(e) => setFormData({ ...formData, colors: e.target.value })} placeholder="Noir, Blanc" />
               </div>
             </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="colors">Couleurs disponibles</Label>
-              <Input
-                id="colors"
-                value={formData.colors}
-                onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
-                placeholder="Séparez les couleurs par des virgules: Naturel, Blanc, Noir"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Dimensions</Label>
+                <Input value={formData.dimensions} onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })} placeholder="120x60x40 cm" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Poids</Label>
+                <Input value={formData.weight} onChange={(e) => setFormData({ ...formData, weight: e.target.value })} placeholder="12 kg" />
+              </div>
             </div>
-            
+
             <div className="flex gap-6">
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="inStock"
-                  checked={formData.inStock}
-                  onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="inStock" className="cursor-pointer">En stock</Label>
+                <input type="checkbox" id="isTrending" checked={formData.isTrending} onChange={(e) => setFormData({ ...formData, isTrending: e.target.checked })} className="h-4 w-4" />
+                <Label htmlFor="isTrending" className="cursor-pointer">Produit vedette</Label>
               </div>
-              
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="featured"
-                  checked={formData.featured}
-                  onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="featured" className="cursor-pointer">Produit vedette</Label>
+                <input type="checkbox" id="isDisabled" checked={formData.isDisabled} onChange={(e) => setFormData({ ...formData, isDisabled: e.target.checked })} className="h-4 w-4" />
+                <Label htmlFor="isDisabled" className="cursor-pointer">Désactivé</Label>
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingProduct ? "Enregistrer" : "Ajouter"}
-            </Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
+            <Button onClick={handleSubmit} disabled={isLoading}>{isLoading ? "Enregistrement..." : editingProduct ? "Enregistrer" : "Ajouter"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.
-            </AlertDialogDescription>
+            <AlertDialogDescription>Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Supprimer
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
