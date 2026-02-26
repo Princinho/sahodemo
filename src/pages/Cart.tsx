@@ -1,33 +1,33 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
-import { products } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { Product } from "@/models/Product";
+import { productsApi } from "@/api/productsApi";
 
 const Cart = () => {
   const { items, removeItem, updateQuantity } = useCart();
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const cartProducts = items.map((item) => ({
-    ...products.find((p) => p.id === item.productId)!,
-    quantity: item.quantity,
-    selectedColor: item.selectedColor,
-  }));
+  useEffect(() => {
+    productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {});
+  }, []);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XOF",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const cartProducts = items
+    .map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      return product ? { ...product, quantity: item.quantity, selectedColor: item.selectedColor } : null;
+    })
+    .filter(Boolean) as (Product & { quantity: number; selectedColor?: string })[];
 
-  const subtotal = cartProducts.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", minimumFractionDigits: 0 }).format(price);
+
+  const subtotal = cartProducts.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (items.length === 0) {
     return (
@@ -35,9 +35,7 @@ const Cart = () => {
         <div className="text-center">
           <ShoppingBag className="h-24 w-24 text-muted-foreground mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">Votre sélection est vide</h1>
-          <p className="text-muted-foreground mb-6">
-            Commencez à explorer notre catalogue pour ajouter des produits
-          </p>
+          <p className="text-muted-foreground mb-6">Commencez à explorer notre catalogue pour ajouter des produits</p>
           <Link to="/catalog">
             <Button size="lg">
               Découvrir nos produits
@@ -53,99 +51,43 @@ const Cart = () => {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
         <h1 className="text-4xl font-bold mb-8">Ma Sélection</h1>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {cartProducts.map((product) => (
               <Card key={product.id}>
                 <CardContent className="p-6">
                   <div className="flex gap-6">
-                    {/* Image */}
-                    <Link
-                      to={`/product/${product.id}`}
-                      className="flex-shrink-0"
-                    >
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-24 h-24 object-cover rounded-lg hover:opacity-80 transition-smooth"
-                      />
+                    <Link to={`/product/${product.id}`} className="flex-shrink-0">
+                      <img src={product.imageUrls?.[0] || "/placeholder.svg"} alt={product.name} className="w-24 h-24 object-cover rounded-lg hover:opacity-80 transition-smooth" />
                     </Link>
-
-                    {/* Details */}
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <Link to={`/product/${product.id}`}>
-                            <h3 className="font-semibold text-lg hover:text-primary transition-smooth">
-                              {product.name}
-                            </h3>
+                            <h3 className="font-semibold text-lg hover:text-primary transition-smooth">{product.name}</h3>
                           </Link>
-                          <p className="text-sm text-muted-foreground">
-                            {product.category}
-                          </p>
                           {product.selectedColor && (
-                            <p className="text-sm text-muted-foreground">
-                              Coloris: {product.selectedColor}
-                            </p>
+                            <p className="text-sm text-muted-foreground">Coloris: {product.selectedColor}</p>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(product.id)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => removeItem(product.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
-
                       <div className="flex items-center justify-between">
-                        {/* Quantity */}
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              updateQuantity(product.id, Math.max(1, product.quantity - 1))
-                            }
-                          >
+                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(product.id, Math.max(1, product.quantity - 1))}>
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <Input
-                            type="number"
-                            value={product.quantity}
-                            onChange={(e) =>
-                              updateQuantity(
-                                product.id,
-                                Math.max(1, parseInt(e.target.value) || 1)
-                              )
-                            }
-                            className="w-16 text-center"
-                            min="1"
-                          />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              updateQuantity(product.id, product.quantity + 1)
-                            }
-                          >
+                          <Input type="number" value={product.quantity} onChange={(e) => updateQuantity(product.id, Math.max(1, parseInt(e.target.value) || 1))} className="w-16 text-center" min="1" />
+                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(product.id, product.quantity + 1)}>
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-
-                        {/* Price */}
                         <div className="text-right">
-                          <div className="text-lg font-bold text-primary">
-                            {formatPrice(product.price * product.quantity)}
-                          </div>
+                          <div className="text-lg font-bold text-primary">{formatPrice(product.price * product.quantity)}</div>
                           {product.quantity > 1 && (
-                            <div className="text-xs text-muted-foreground">
-                              {formatPrice(product.price)} / unité
-                            </div>
+                            <div className="text-xs text-muted-foreground">{formatPrice(product.price)} / unité</div>
                           )}
                         </div>
                       </div>
@@ -156,35 +98,27 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* Summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-20">
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4">Récapitulatif</h2>
-
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">
-                      Articles ({items.reduce((sum, item) => sum + item.quantity, 0)})
-                    </span>
+                    <span className="text-muted-foreground">Articles ({items.reduce((sum, item) => sum + item.quantity, 0)})</span>
                     <span className="font-semibold">{formatPrice(subtotal)}</span>
                   </div>
                 </div>
-
                 <Separator className="my-4" />
-
                 <div className="flex justify-between text-lg font-bold mb-6">
                   <span>Total indicatif</span>
                   <span className="text-primary">{formatPrice(subtotal)}</span>
                 </div>
-
                 <Link to="/quote-request">
                   <Button size="lg" className="w-full shadow-gold">
                     Demander un devis
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-
                 <p className="text-xs text-muted-foreground text-center mt-4">
                   Le prix final sera déterminé après validation de votre demande
                 </p>

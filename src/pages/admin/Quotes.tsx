@@ -1,170 +1,123 @@
-import { useState } from "react";
-import { mockQuoteRequests, mockQuoteNotes, products, QuoteNote } from "@/data/mockData";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Eye, Mail, Phone, Upload, FileText, Plus, Send, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Search, Eye, Mail, Phone, Plus, Send, Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { quoteRequestsApi, QuoteRequest, QuoteNote } from "@/api/quoteRequestsApi";
 
 const Quotes = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedQuote, setSelectedQuote] = useState<any>(null);
-  
-  const [quoteNotes, setQuoteNotes] = useState<QuoteNote[]>(mockQuoteNotes);
+  const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
+  const [selectedQuote, setSelectedQuote] = useState<QuoteRequest | null>(null);
   const [newNote, setNewNote] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fonctions simulées pour l'API
-  const simulateFileUpload = async (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(URL.createObjectURL(file));
-      }, 1000);
+  const fetchQuotes = () => {
+    quoteRequestsApi.getAll({ limit: 100 }).then((res) => setQuotes(res.items)).catch(() => {
+      toast({ title: "Erreur", description: "Impossible de charger les demandes", variant: "destructive" });
     });
   };
 
-  const simulateSendEmail = async (email: string, fileName: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Email simulé envoyé à ${email} avec le fichier ${fileName}`);
-        resolve(true);
-      }, 500);
-    });
-  };
+  useEffect(() => { fetchQuotes(); }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadedFile(e.target.files[0]);
+  const handleViewQuote = async (quote: QuoteRequest) => {
+    try {
+      const detail = await quoteRequestsApi.getById(quote.id);
+      setSelectedQuote(detail);
+    } catch {
+      setSelectedQuote(quote);
     }
   };
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !selectedQuote) return;
-
-    let fileUrl: string | undefined;
-    let fileName: string | undefined;
-
-    if (uploadedFile) {
-      try {
-        fileUrl = await simulateFileUpload(uploadedFile);
-        fileName = uploadedFile.name;
-        await simulateSendEmail(selectedQuote.customerEmail, uploadedFile.name);
-      } catch {
-        toast({ title: "Erreur", description: "Erreur lors de l'upload du fichier", variant: "destructive" });
-        return;
-      }
+    setIsLoading(true);
+    try {
+      await quoteRequestsApi.addNote(selectedQuote.id, newNote, uploadedFile || undefined);
+      toast({
+        title: uploadedFile ? "Note et devis ajoutés" : "Note ajoutée",
+        description: uploadedFile ? "La note et le devis ont été envoyés" : "La note a été ajoutée avec succès",
+      });
+      setNewNote("");
+      setUploadedFile(null);
+      // Refresh quote detail
+      const detail = await quoteRequestsApi.getById(selectedQuote.id);
+      setSelectedQuote(detail);
+      fetchQuotes();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.response?.data?.error || "Impossible d'ajouter la note", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-
-    const note: QuoteNote = {
-      id: `QN${String(quoteNotes.length + 1).padStart(3, '0')}`,
-      quoteRequestId: selectedQuote.id,
-      content: newNote,
-      createdDate: new Date().toLocaleString('fr-FR'),
-      createdBy: 'Admin',
-      fileName,
-      fileUrl,
-    };
-
-    setQuoteNotes([...quoteNotes, note]);
-    setNewNote("");
-    setUploadedFile(null);
-
-    toast({
-      title: uploadedFile ? "Note et devis ajoutés" : "Note ajoutée",
-      description: uploadedFile
-        ? `La note et le devis ont été envoyés à ${selectedQuote.customerEmail}`
-        : "La note a été ajoutée avec succès",
-    });
   };
 
-  
-
-  const getQuoteNotes = (quoteId: string) => {
-    return quoteNotes.filter(n => n.quoteRequestId === quoteId);
+  const handleStatusChange = async (status: string) => {
+    if (!selectedQuote) return;
+    try {
+      await quoteRequestsApi.updateStatus(selectedQuote.id, status);
+      toast({ title: "Statut mis à jour" });
+      const detail = await quoteRequestsApi.getById(selectedQuote.id);
+      setSelectedQuote(detail);
+      fetchQuotes();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.response?.data?.error || "Impossible de mettre à jour le statut", variant: "destructive" });
+    }
   };
 
-  const filteredQuotes = mockQuoteRequests.filter(
+  const filteredQuotes = quotes.filter(
     (q) =>
-      q.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       q.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "new":
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Nouveau</Badge>;
-      case "in-progress":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En cours</Badge>;
-      case "completed":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Terminé</Badge>;
-      case "archived":
-        return <Badge variant="outline">Archivé</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+      case "NEW": return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Nouveau</Badge>;
+      case "IN_PROGRESS": return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En cours</Badge>;
+      case "QUOTED": return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Devis envoyé</Badge>;
+      case "REJECTED": return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Refusé</Badge>;
+      case "CLOSED": return <Badge variant="outline">Clôturé</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XOF",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", minimumFractionDigits: 0 }).format(price);
 
-  const calculateQuoteTotal = (quote: any) => {
-    return quote.products.reduce((sum: number, item: any) => {
-      const product = products.find((p) => p.id === item.productId);
-      return sum + (product?.price || 0) * item.quantity;
-    }, 0);
-  };
+  const calculateQuoteTotal = (quote: QuoteRequest) =>
+    quote.items.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Demandes de Devis</h1>
-        <p className="text-muted-foreground mt-1">
-          {filteredQuotes.length} demande(s) au total
-        </p>
+        <p className="text-muted-foreground mt-1">{filteredQuotes.length} demande(s) au total</p>
       </div>
 
-      {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="Rechercher une demande..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+        <Input type="text" placeholder="Rechercher une demande..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
       </div>
 
-      {/* Quotes Table */}
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Référence</TableHead>
               <TableHead>Client</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Date</TableHead>
@@ -177,204 +130,157 @@ const Quotes = () => {
           <TableBody>
             {filteredQuotes.map((quote) => (
               <TableRow key={quote.id}>
-                <TableCell className="font-medium">{quote.id}</TableCell>
                 <TableCell>
-                  <div>
-                    <p className="font-medium">{quote.customerName}</p>
-                    {quote.company && (
-                      <p className="text-xs text-muted-foreground">
-                        {quote.company}
-                      </p>
-                    )}
-                  </div>
+                  <p className="font-medium">{quote.fullName}</p>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    <p className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {quote.customerEmail}
-                    </p>
-                    <p className="flex items-center gap-1 text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      {quote.customerPhone}
-                    </p>
+                    <p className="flex items-center gap-1"><Mail className="h-3 w-3" />{quote.email}</p>
+                    {quote.phone && <p className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" />{quote.phone}</p>}
                   </div>
                 </TableCell>
-                <TableCell>{quote.date}</TableCell>
-                <TableCell>{quote.products.length} article(s)</TableCell>
-                <TableCell className="font-semibold">
-                  {formatPrice(calculateQuoteTotal(quote))}
-                </TableCell>
+                <TableCell>{new Date(quote.createdAt).toLocaleDateString("fr-FR")}</TableCell>
+                <TableCell>{quote.items.length} article(s)</TableCell>
+                <TableCell className="font-semibold">{formatPrice(calculateQuoteTotal(quote))}</TableCell>
                 <TableCell>{getStatusBadge(quote.status)}</TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedQuote(quote)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => handleViewQuote(quote)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
+            {filteredQuotes.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Aucune demande trouvée</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Quote Detail Dialog */}
       <Dialog open={!!selectedQuote} onOpenChange={() => setSelectedQuote(null)}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           {selectedQuote && (
             <>
               <DialogHeader>
-                <DialogTitle>Demande de Devis #{selectedQuote.id}</DialogTitle>
+                <DialogTitle>Demande de Devis</DialogTitle>
                 <DialogDescription>
-                  Reçue le {selectedQuote.date} - {getStatusBadge(selectedQuote.status)}
+                  Reçue le {new Date(selectedQuote.createdAt).toLocaleDateString("fr-FR")} - {getStatusBadge(selectedQuote.status)}
                 </DialogDescription>
               </DialogHeader>
+
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-sm font-medium">Changer le statut :</span>
+                <Select value={selectedQuote.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NEW">Nouveau</SelectItem>
+                    <SelectItem value="IN_PROGRESS">En cours</SelectItem>
+                    <SelectItem value="QUOTED">Devis envoyé</SelectItem>
+                    <SelectItem value="REJECTED">Refusé</SelectItem>
+                    <SelectItem value="CLOSED">Clôturé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <Tabs defaultValue="details" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="details">Détails</TabsTrigger>
-                  <TabsTrigger value="suivi">
-                    Suivi ({getQuoteNotes(selectedQuote.id).length})
-                  </TabsTrigger>
+                  <TabsTrigger value="suivi">Suivi ({selectedQuote.notes?.length || 0})</TabsTrigger>
                 </TabsList>
 
-                {/* Onglet Détails */}
                 <TabsContent value="details" className="space-y-6">
-                  {/* Customer Info */}
                   <div>
                     <h3 className="font-semibold mb-3">Informations Client</h3>
                     <div className="space-y-2 text-sm">
-                      <p><strong>Nom:</strong> {selectedQuote.customerName}</p>
-                      <p><strong>Email:</strong> {selectedQuote.customerEmail}</p>
-                      <p><strong>Téléphone:</strong> {selectedQuote.customerPhone}</p>
-                      {selectedQuote.company && (
-                        <p><strong>Entreprise:</strong> {selectedQuote.company}</p>
-                      )}
+                      <p><strong>Nom:</strong> {selectedQuote.fullName}</p>
+                      <p><strong>Email:</strong> {selectedQuote.email}</p>
+                      {selectedQuote.phone && <p><strong>Téléphone:</strong> {selectedQuote.phone}</p>}
+                      {selectedQuote.country && <p><strong>Pays:</strong> {selectedQuote.country}</p>}
+                      {selectedQuote.city && <p><strong>Ville:</strong> {selectedQuote.city}</p>}
+                      {selectedQuote.address && <p><strong>Adresse:</strong> {selectedQuote.address}</p>}
                     </div>
                   </div>
 
-                  {/* Products */}
                   <div>
                     <h3 className="font-semibold mb-3">Produits Demandés</h3>
                     <div className="space-y-3">
-                      {selectedQuote.products.map((item: any) => {
-                        const product = products.find((p) => p.id === item.productId);
-                        return product ? (
-                          <div key={item.productId} className="flex gap-3 p-3 border rounded-lg">
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="w-16 h-16 object-cover rounded"
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium">{product.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Quantité: {item.quantity}
-                              </p>
-                              <p className="text-sm font-semibold text-primary">
-                                {formatPrice(product.price * item.quantity)}
-                              </p>
-                            </div>
+                      {selectedQuote.items.map((item, i) => (
+                        <div key={i} className="flex gap-3 p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.productName || item.productId}</p>
+                            <p className="text-sm text-muted-foreground">Quantité: {item.quantity}</p>
+                            {item.unitPrice && (
+                              <p className="text-sm font-semibold text-primary">{formatPrice(item.unitPrice * item.quantity)}</p>
+                            )}
                           </div>
-                        ) : null;
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Message */}
                   {selectedQuote.message && (
                     <div>
                       <h3 className="font-semibold mb-3">Message du Client</h3>
-                      <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
-                        {selectedQuote.message}
-                      </p>
+                      <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">{selectedQuote.message}</p>
                     </div>
                   )}
 
-                  {/* Total */}
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center text-lg font-bold">
                       <span>Total Indicatif</span>
-                      <span className="text-primary">
-                        {formatPrice(calculateQuoteTotal(selectedQuote))}
-                      </span>
+                      <span className="text-primary">{formatPrice(calculateQuoteTotal(selectedQuote))}</span>
                     </div>
                   </div>
                 </TabsContent>
 
-                {/* Onglet Suivi */}
                 <TabsContent value="suivi" className="space-y-6">
-                  {/* Ajout de note */}
                   <div className="border rounded-lg p-4 space-y-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <Plus className="h-5 w-5" />
                       Ajouter une note
                     </h3>
-                    <Textarea
-                      placeholder="Écrivez une note pour suivre ce client..."
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      rows={3}
-                    />
+                    <Textarea placeholder="Écrivez une note pour suivre ce client..." value={newNote} onChange={(e) => setNewNote(e.target.value)} rows={3} />
                     <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Devis en pièce jointe (optionnel)
-                      </label>
-                      <Input
-                        type="file"
-                        accept=".pdf"
-                        onChange={handleFileChange}
-                        className="cursor-pointer"
-                      />
-                      {uploadedFile && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Fichier sélectionné: {uploadedFile.name}
-                        </p>
-                      )}
+                      <label className="text-sm font-medium mb-2 block">Devis en pièce jointe (optionnel)</label>
+                      <Input type="file" accept=".pdf" onChange={(e) => setUploadedFile(e.target.files?.[0] || null)} className="cursor-pointer" />
+                      {uploadedFile && <p className="text-sm text-muted-foreground mt-1">Fichier sélectionné: {uploadedFile.name}</p>}
                     </div>
-                    <Button
-                      onClick={handleAddNote}
-                      disabled={!newNote.trim()}
-                      className="w-full"
-                    >
+                    <Button onClick={handleAddNote} disabled={!newNote.trim() || isLoading} className="w-full">
                       <Send className="h-4 w-4 mr-2" />
-                      {uploadedFile ? "Ajouter la note et envoyer le devis" : "Ajouter la note"}
+                      {isLoading ? "Envoi..." : uploadedFile ? "Ajouter la note et envoyer le devis" : "Ajouter la note"}
                     </Button>
                   </div>
 
-                  {/* Historique des notes et devis */}
                   <div>
                     <h3 className="font-semibold mb-3">Historique de suivi</h3>
-                    {getQuoteNotes(selectedQuote.id).length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        Aucune note pour le moment
-                      </p>
+                    {!selectedQuote.notes?.length ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">Aucune note pour le moment</p>
                     ) : (
                       <div className="space-y-3">
-                        {getQuoteNotes(selectedQuote.id).map((note) => (
-                          <div
-                            key={note.id}
-                            className="p-3 border rounded-lg bg-muted/30"
-                          >
+                        {selectedQuote.notes.map((note: QuoteNote) => (
+                          <div key={note.id} className="p-3 border rounded-lg bg-muted/30">
                             <p className="text-sm mb-2">{note.content}</p>
-                            {note.fileName && (
+                            {note.quotePdf && (
                               <div className="flex items-center gap-2 mt-2 p-2 border rounded bg-background">
                                 <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium flex-1">{note.fileName}</span>
+                                <span className="text-sm font-medium flex-1">Devis PDF</span>
                                 <Badge variant="outline" className="text-xs">
                                   <Mail className="h-3 w-3 mr-1" />
                                   Envoyé
                                 </Badge>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Download className="h-4 w-4" />
-                                </Button>
+                                <a href={note.quotePdf.publicUrl} target="_blank" rel="noopener noreferrer">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </a>
                               </div>
                             )}
                             <p className="text-xs text-muted-foreground mt-2">
-                              {note.createdDate} - {note.createdBy}
+                              {new Date(note.createdAt).toLocaleString("fr-FR")} - {note.authorEmail}
                             </p>
                           </div>
                         ))}

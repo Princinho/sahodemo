@@ -1,12 +1,19 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Package, Sparkles, Shield } from "lucide-react";
-import { categories, products } from "@/data/mockData";
 import { CategoryCard } from "@/components/CategoryCard";
-import { ProductCard } from "@/components/ProductCard";
+import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
 
 const Home = () => {
-  const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+
+  useEffect(() => {
+    categoriesApi
+      .getAll({ limit: 50, isActive: true })
+      .then((res) => setCategories(res.items))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen">
@@ -22,7 +29,6 @@ const Home = () => {
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 to-primary/80 z-10" />
-        
         <div className="relative z-20 container mx-auto px-4 text-center text-primary-foreground">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             Vous servir,<br />notre vocation
@@ -38,11 +44,7 @@ const Home = () => {
               </Button>
             </Link>
             <Link to="/about">
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10"
-              >
+              <Button size="lg" variant="outline" className="text-lg bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10">
                 En savoir plus
               </Button>
             </Link>
@@ -59,27 +61,21 @@ const Home = () => {
                 <Sparkles className="h-8 w-8 text-accent" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Qualité Premium</h3>
-              <p className="text-muted-foreground">
-                Une sélection rigoureuse de produits d'exception
-              </p>
+              <p className="text-muted-foreground">Une sélection rigoureuse de produits d'exception</p>
             </div>
             <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-4">
                 <Shield className="h-8 w-8 text-accent" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Service Personnalisé</h3>
-              <p className="text-muted-foreground">
-                Accompagnement sur mesure pour tous vos projets
-              </p>
+              <p className="text-muted-foreground">Accompagnement sur mesure pour tous vos projets</p>
             </div>
             <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/10 mb-4">
                 <Package className="h-8 w-8 text-accent" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Livraison Soignée</h3>
-              <p className="text-muted-foreground">
-                Installation et livraison avec le plus grand soin
-              </p>
+              <p className="text-muted-foreground">Installation et livraison avec le plus grand soin</p>
             </div>
           </div>
         </div>
@@ -100,37 +96,10 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Products */}
-      {/* <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Produits en Vedette</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Nos coups de cœur du moment
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-          <div className="text-center">
-            <Link to="/catalog">
-              <Button size="lg" variant="outline">
-                Voir tous les produits
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section> */}
-
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-4">
-            Besoin d'un produit spécifique ?
-          </h2>
+          <h2 className="text-4xl font-bold mb-4">Besoin d'un produit spécifique ?</h2>
           <p className="text-xl opacity-95 mb-8 max-w-2xl mx-auto">
             Notre équipe est à votre écoute pour répondre à toutes vos demandes sur mesure
           </p>

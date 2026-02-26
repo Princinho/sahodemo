@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { categories } from "@/data/mockData";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,8 @@ import {
 } from "@/components/ui/select";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Product } from "@/models/Product";
-import { getAllProducts } from "@/api/api";
+import { productsApi } from "@/api/productsApi";
+import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
 
 const Catalog = () => {
   const [searchParams] = useSearchParams();
@@ -22,32 +22,34 @@ const Catalog = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [sortBy, setSortBy] = useState<string>("featured");
-  const [products, setProducts] = useState<Product[]>([])
-  // Update selected category when URL parameter changes
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+
   useEffect(() => {
     if (categoryParam) {
       setSelectedCategory(categoryParam);
     } else {
       setSelectedCategory("all");
     }
-    // Scroll to top when category changes from URL
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [categoryParam]);
 
   useEffect(() => {
-    getAllProducts().then(data => setProducts(data))
+    productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {});
+    categoriesApi.getAll({ limit: 50 }).then((res) => setCategories(res.items)).catch(() => {});
   }, []);
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = [...products];
 
-    console.log(selectedCategory)
-    // Filter by category
     if (selectedCategory && selectedCategory !== "all") {
-      filtered = filtered.filter((p) => p.category === selectedCategory);
+      // Match by category slug
+      const cat = categories.find((c) => c.slug === selectedCategory || c.name === selectedCategory);
+      if (cat) {
+        filtered = filtered.filter((p) => p.categoryIds?.includes(cat.id));
+      }
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       filtered = filtered.filter(
         (p) =>
@@ -56,7 +58,6 @@ const Catalog = () => {
       );
     }
 
-    // Sort
     switch (sortBy) {
       case "price-asc":
         filtered.sort((a, b) => a.price - b.price);
@@ -76,20 +77,16 @@ const Catalog = () => {
         });
     }
     return filtered;
-  }, [selectedCategory, searchQuery, sortBy,products]);
+  }, [selectedCategory, searchQuery, sortBy, products, categories]);
 
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Notre Catalogue</h1>
-          <p className="text-xl text-muted-foreground">
-            Découvrez l'ensemble de nos produits
-          </p>
+          <p className="text-xl text-muted-foreground">Découvrez l'ensemble de nos produits</p>
         </div>
 
-        {/* Filters */}
         <div className="bg-card rounded-lg shadow-soft p-6 mb-8">
           <div className="flex items-center gap-2 mb-4">
             <SlidersHorizontal className="h-5 w-5 text-muted-foreground" />
@@ -97,7 +94,6 @@ const Catalog = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -109,7 +105,6 @@ const Catalog = () => {
               />
             </div>
 
-            {/* Category Filter */}
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger>
                 <SelectValue placeholder="Toutes les catégories" />
@@ -117,14 +112,13 @@ const Catalog = () => {
               <SelectContent>
                 <SelectItem value="all">Toutes les catégories</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
+                  <SelectItem key={cat.id} value={cat.slug}>
                     {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            {/* Sort */}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger>
                 <SelectValue placeholder="Trier par" />
@@ -138,25 +132,16 @@ const Catalog = () => {
             </Select>
           </div>
 
-          {/* Active filters */}
           {(selectedCategory !== "all" || searchQuery) && (
             <div className="flex items-center gap-2 mt-4">
               <span className="text-sm text-muted-foreground">Filtres actifs:</span>
               {selectedCategory !== "all" && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setSelectedCategory("all")}
-                >
-                  {selectedCategory} ×
+                <Button variant="secondary" size="sm" onClick={() => setSelectedCategory("all")}>
+                  {categories.find((c) => c.slug === selectedCategory)?.name || selectedCategory} ×
                 </Button>
               )}
               {searchQuery && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setSearchQuery("")}
-                >
+                <Button variant="secondary" size="sm" onClick={() => setSearchQuery("")}>
                   "{searchQuery}" ×
                 </Button>
               )}
@@ -164,18 +149,13 @@ const Catalog = () => {
           )}
         </div>
 
-        {/* Results Count */}
         <div className="mb-6">
           <p className="text-muted-foreground">
-            <span className="font-semibold text-foreground">
-              {filteredAndSortedProducts.length}
-            </span>{" "}
-            produit{filteredAndSortedProducts.length > 1 ? "s" : ""} trouvé
-            {filteredAndSortedProducts.length > 1 ? "s" : ""}
+            <span className="font-semibold text-foreground">{filteredAndSortedProducts.length}</span>{" "}
+            produit{filteredAndSortedProducts.length > 1 ? "s" : ""} trouvé{filteredAndSortedProducts.length > 1 ? "s" : ""}
           </p>
         </div>
 
-        {/* Products Grid */}
         {filteredAndSortedProducts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredAndSortedProducts.map((product) => (
@@ -184,16 +164,8 @@ const Catalog = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-xl text-muted-foreground mb-4">
-              Aucun produit ne correspond à vos critères
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("all");
-              }}
-            >
+            <p className="text-xl text-muted-foreground mb-4">Aucun produit ne correspond à vos critères</p>
+            <Button variant="outline" onClick={() => { setSearchQuery(""); setSelectedCategory("all"); }}>
               Réinitialiser les filtres
             </Button>
           </div>

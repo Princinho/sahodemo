@@ -1,88 +1,97 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockQuoteRequests, products } from "@/data/mockData";
 import { Package, ShoppingCart, FileText, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { productsApi } from "@/api/productsApi";
+import { categoriesApi } from "@/api/categoriesApi";
+import { quoteRequestsApi, QuoteRequest } from "@/api/quoteRequestsApi";
 
 const Dashboard = () => {
-  const stats = {
-    totalProducts: products.length,
-    inStock: products.filter((p) => p.inStock).length,
-    totalQuotes: mockQuoteRequests.length,
-    newQuotes: mockQuoteRequests.filter((q) => q.status === "new").length,
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalCategories, setTotalCategories] = useState(0);
+  const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
+  const [totalQuotes, setTotalQuotes] = useState(0);
+
+  useEffect(() => {
+    productsApi.getAll({ limit: 1 }).then((res) => setTotalProducts(res.total)).catch(() => {});
+    categoriesApi.getAll({ limit: 1 }).then((res) => setTotalCategories(res.total)).catch(() => {});
+    quoteRequestsApi.getAll({ limit: 5 }).then((res) => {
+      setQuotes(res.items);
+      setTotalQuotes(res.total);
+    }).catch(() => {});
+  }, []);
+
+  const newQuotes = quotes.filter((q) => q.status === "NEW").length;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "NEW":
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Nouveau</Badge>;
+      case "IN_PROGRESS":
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">En cours</Badge>;
+      case "QUOTED":
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Devis envoyé</Badge>;
+      case "REJECTED":
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Refusé</Badge>;
+      case "CLOSED":
+        return <Badge variant="outline">Clôturé</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold mb-2">Tableau de Bord</h1>
-        <p className="text-muted-foreground">
-          Bienvenue sur votre espace d'administration SAHO
-        </p>
+        <p className="text-muted-foreground">Bienvenue sur votre espace d'administration SAHO</p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Produits Total
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Produits Total</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.inStock} en stock
-            </p>
+            <div className="text-2xl font-bold">{totalProducts}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Demandes de Devis
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Demandes de Devis</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalQuotes}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.newQuotes} nouvelles
-            </p>
+            <div className="text-2xl font-bold">{totalQuotes}</div>
+            <p className="text-xs text-muted-foreground mt-1">{newQuotes} nouvelles</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Catégories
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Catégories</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Mobilier, Décoration, Textile, Accessoires
-            </p>
+            <div className="text-2xl font-bold">{totalCategories}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Taux de Conversion
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Taux de Conversion</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12.5%</div>
-            <p className="text-xs text-green-600 mt-1">+2.4% ce mois</p>
+            <div className="text-2xl font-bold">—</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Actions Rapides</CardTitle>
@@ -100,55 +109,40 @@ const Dashboard = () => {
               Voir les Demandes
             </Button>
           </Link>
-          <Button variant="outline" className="w-full">
-            <TrendingUp className="mr-2 h-4 w-4" />
-            Rapports
-          </Button>
+          <Link to="/admin/categories">
+            <Button variant="outline" className="w-full">
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Gérer les Catégories
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
-      {/* Recent Quotes */}
       <Card>
         <CardHeader>
           <CardTitle>Demandes de Devis Récentes</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {mockQuoteRequests.slice(0, 3).map((quote) => (
-              <div
-                key={quote.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
+            {quotes.slice(0, 3).map((quote) => (
+              <div key={quote.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
-                  <p className="font-semibold">{quote.customerName}</p>
+                  <p className="font-semibold">{quote.fullName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {quote.customerEmail} • {quote.date}
+                    {quote.email} • {new Date(quote.createdAt).toLocaleDateString("fr-FR")}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      quote.status === "new"
-                        ? "bg-blue-100 text-blue-800"
-                        : quote.status === "in-progress"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {quote.status === "new"
-                      ? "Nouveau"
-                      : quote.status === "in-progress"
-                      ? "En cours"
-                      : "Terminé"}
-                  </span>
-                  <Link to={`/admin/quotes`}>
-                    <Button size="sm" variant="outline">
-                      Voir
-                    </Button>
+                  {getStatusBadge(quote.status)}
+                  <Link to="/admin/quotes">
+                    <Button size="sm" variant="outline">Voir</Button>
                   </Link>
                 </div>
               </div>
             ))}
+            {quotes.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Aucune demande récente</p>
+            )}
           </div>
         </CardContent>
       </Card>

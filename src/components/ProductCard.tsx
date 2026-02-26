@@ -34,12 +34,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     }).format(price);
   };
 
+  const inStock = product.quantity > 0;
+
   return (
     <Link to={`/product/${product.id}`}>
       <Card className="group overflow-hidden hover:shadow-large transition-slow cursor-pointer h-full flex flex-col">
         <div className="relative overflow-hidden aspect-[4/3]">
           <img
-            src={product.imageUrls[0]}
+            src={product.imageUrls?.[0] || "/placeholder.svg"}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-slow"
           />
@@ -48,7 +50,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               En vedette
             </Badge>
           )}
-          {!(product.quantity>0) && (
+          {!inStock && (
             <Badge className="absolute top-3 right-3 bg-destructive text-destructive-foreground">
               Rupture
             </Badge>
@@ -56,9 +58,6 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
         <CardContent className="p-4 flex-1">
           <div className="mb-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              {product.category}
-            </p>
             <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-smooth mt-1">
               {product.name}
             </h3>
@@ -77,7 +76,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 <Button
                   size="icon"
                   onClick={handleAddToCart}
-                  disabled={!(product.quantity>0)}
+                  disabled={!inStock}
                   className="shadow-soft hover:shadow-gold transition-smooth shrink-0"
                 >
                   <ShoppingCart className="h-4 w-4" />

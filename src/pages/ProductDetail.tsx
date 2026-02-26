@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { products } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -22,16 +21,39 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
+import { Product } from "@/models/Product";
+import { productsApi } from "@/api/productsApi";
 
 const ProductDetail = () => {
-  const { slug } = useParams();
-  const product = products.find((p) => p.slug === slug);
+  const { slug } = useParams(); // slug is actually the product id
   const { addItem } = useCart();
-
+  const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(
-    product?.colors[0]
-  );
+  const [selectedColor, setSelectedColor] = useState<string | undefined>();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    productsApi
+      .getAll({ limit: 100 })
+      .then((res) => {
+        setAllProducts(res.items);
+        const found = res.items.find((p) => p.id === slug || p.slug === slug);
+        setProduct(found || null);
+        if (found?.colors?.length) setSelectedColor(found.colors[0]);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -51,110 +73,79 @@ const ProductDetail = () => {
     toast.success(`${product.name} ajouté à votre sélection`);
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "XOF",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", minimumFractionDigits: 0 }).format(price);
 
-  const relatedProducts = products
-    .filter((p) => p.category === product.category && p.id !== product.id)
+  const inStock = product.quantity > 0;
+  const relatedProducts = allProducts
+    .filter((p) => p.id !== product.id && p.categoryIds?.some((cid) => product.categoryIds?.includes(cid)))
     .slice(0, 4);
 
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
-        {/* Breadcrumb */}
         <div className="mb-6">
-          <Link
-            to="/catalog"
-            className="inline-flex items-center text-muted-foreground hover:text-primary transition-smooth"
-          >
+          <Link to="/catalog" className="inline-flex items-center text-muted-foreground hover:text-primary transition-smooth">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour au catalogue
           </Link>
         </div>
 
-        {/* Product Detail */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* Images */}
           <div>
             <div className="aspect-square rounded-lg overflow-hidden shadow-medium mb-4">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={product.imageUrls?.[selectedImage] || "/placeholder.svg"} alt={product.name} className="w-full h-full object-cover" />
             </div>
-            {product.images.length > 1 && (
+            {product.imageUrls?.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
-                {product.images.map((image, index) => (
+                {product.imageUrls.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-smooth ${
-                      selectedImage === index
-                        ? "border-primary shadow-soft"
-                        : "border-transparent hover:border-muted"
-                    }`}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-smooth ${selectedImage === index ? "border-primary shadow-soft" : "border-transparent hover:border-muted"}`}
                   >
-                    <img
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Product Info */}
           <div>
             <div className="mb-4">
-              <Badge variant="outline" className="mb-2">
-                {product.category}
-              </Badge>
-              {product.featured && (
-                <Badge className="ml-2 bg-accent text-accent-foreground">
-                  En vedette
-                </Badge>
+              {product.isTrending && (
+                <Badge className="bg-accent text-accent-foreground">En vedette</Badge>
               )}
             </div>
 
             <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
-
-            <div className="text-3xl font-bold text-primary mb-6">
-              {formatPrice(product.price)}
-            </div>
-
-            <p className="text-lg text-muted-foreground mb-6">
-              {product.description}
-            </p>
+            <div className="text-3xl font-bold text-primary mb-6">{formatPrice(product.price)}</div>
+            <p className="text-lg text-muted-foreground mb-6">{product.description}</p>
 
             <Separator className="my-6" />
 
-            {/* Specifications */}
             <div className="space-y-4 mb-6">
-              <div className="flex items-start gap-3">
-                <Package className="h-5 w-5 text-accent mt-0.5" />
-                <div>
-                  <p className="font-semibold">Matériaux</p>
-                  <p className="text-muted-foreground">{product.material}</p>
+              {product.materials?.length > 0 && (
+                <div className="flex items-start gap-3">
+                  <Package className="h-5 w-5 text-accent mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Matériaux</p>
+                    <p className="text-muted-foreground">{product.materials.join(", ")}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-3">
-                <Ruler className="h-5 w-5 text-accent mt-0.5" />
-                <div>
-                  <p className="font-semibold">Dimensions</p>
-                  <p className="text-muted-foreground">{product.dimensions}</p>
+              {product.dimensions && (
+                <div className="flex items-start gap-3">
+                  <Ruler className="h-5 w-5 text-accent mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Dimensions</p>
+                    <p className="text-muted-foreground">{product.dimensions}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {product.colors.length > 0 && (
+              {product.colors?.length > 0 && (
                 <div className="flex items-start gap-3">
                   <Palette className="h-5 w-5 text-accent mt-0.5" />
                   <div className="flex-1">
@@ -165,9 +156,7 @@ const ProductDetail = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {product.colors.map((color) => (
-                          <SelectItem key={color} value={color}>
-                            {color}
-                          </SelectItem>
+                          <SelectItem key={color} value={color}>{color}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -176,28 +165,21 @@ const ProductDetail = () => {
               )}
 
               <div className="flex items-center gap-2">
-                {product.inStock ? (
+                {inStock ? (
                   <>
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-green-600 font-semibold">En stock</span>
+                    <span className="text-green-600 font-semibold">En stock ({product.quantity})</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-5 w-5 text-destructive" />
-                    <span className="text-destructive font-semibold">
-                      Rupture de stock
-                    </span>
+                    <span className="text-destructive font-semibold">Rupture de stock</span>
                   </>
                 )}
               </div>
             </div>
 
-            <Button
-              size="lg"
-              onClick={handleAddToCart}
-              disabled={!product.inStock}
-              className="w-full shadow-soft hover:shadow-gold transition-smooth"
-            >
+            <Button size="lg" onClick={handleAddToCart} disabled={!inStock} className="w-full shadow-soft hover:shadow-gold transition-smooth">
               <ShoppingCart className="h-5 w-5 mr-2" />
               Ajouter à ma sélection
             </Button>
@@ -208,21 +190,19 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Description */}
-        <div className="mb-16">
-          <h2 className="text-2xl font-bold mb-4">Description détaillée</h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {product.longDescription}
-          </p>
-        </div>
+        {product.descriptionFull && (
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-4">Description détaillée</h2>
+            <p className="text-muted-foreground leading-relaxed">{product.descriptionFull}</p>
+          </div>
+        )}
 
-        {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold mb-6">Produits similaires</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => (
-                <ProductCard key={relatedProduct.id} product={relatedProduct as any} />
+              {relatedProducts.map((rp) => (
+                <ProductCard key={rp.id} product={rp} />
               ))}
             </div>
           </div>
