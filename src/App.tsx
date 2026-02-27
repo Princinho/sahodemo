@@ -24,6 +24,8 @@ import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import Quotes from "./pages/admin/Quotes";
 import Categories from "./pages/admin/Categories";
+import ProductRequests from "./pages/admin/ProductRequests";
+import Users from "./pages/admin/Users";
 
 import NotFound from "./pages/NotFound";
 
@@ -63,6 +65,8 @@ const App = () => (
             <Route path="products" element={<Products />} />
             <Route path="quotes" element={<Quotes />} />
             <Route path="categories" element={<Categories />} />
+            <Route path="product-requests" element={<ProductRequests />} />
+            <Route path="users" element={<Users />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

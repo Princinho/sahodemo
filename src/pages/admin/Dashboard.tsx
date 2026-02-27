@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, ShoppingCart, FileText, TrendingUp } from "lucide-react";
+import { Package, ShoppingCart, FileText, TrendingUp, Hammer } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { productsApi } from "@/api/productsApi";
 import { categoriesApi } from "@/api/categoriesApi";
 import { quoteRequestsApi, QuoteRequest } from "@/api/quoteRequestsApi";
+import { productRequestsApi, ProductRequest } from "@/api/productRequestsApi";
 
 const Dashboard = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalCategories, setTotalCategories] = useState(0);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [totalQuotes, setTotalQuotes] = useState(0);
+  const [totalProductRequests, setTotalProductRequests] = useState(0);
 
   useEffect(() => {
     productsApi.getAll({ limit: 1 }).then((res) => setTotalProducts(res.total)).catch(() => {});
@@ -21,6 +23,7 @@ const Dashboard = () => {
       setQuotes(res.items);
       setTotalQuotes(res.total);
     }).catch(() => {});
+    productRequestsApi.getAll({ limit: 1 }).then((res) => setTotalProductRequests(res.total)).catch(() => {});
   }, []);
 
   const newQuotes = quotes.filter((q) => q.status === "NEW").length;
@@ -83,11 +86,11 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Taux de Conversion</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Produits Sur Mesure</CardTitle>
+            <Hammer className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">—</div>
+            <div className="text-2xl font-bold">{totalProductRequests}</div>
           </CardContent>
         </Card>
       </div>
@@ -113,6 +116,12 @@ const Dashboard = () => {
             <Button variant="outline" className="w-full">
               <TrendingUp className="mr-2 h-4 w-4" />
               Gérer les Catégories
+            </Button>
+          </Link>
+          <Link to="/admin/product-requests">
+            <Button variant="outline" className="w-full">
+              <Hammer className="mr-2 h-4 w-4" />
+              Produits Sur Mesure
             </Button>
           </Link>
         </CardContent>
