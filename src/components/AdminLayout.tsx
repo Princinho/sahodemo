@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Package, FileText, LogOut, LayoutDashboard, FolderOpen } from "lucide-react";
+import { Home, Package, FileText, LogOut, LayoutDashboard, FolderOpen, Hammer, Users } from "lucide-react";
 import { authApi } from "@/api/authApi";
 import { useToast } from "@/hooks/use-toast";
 
@@ -66,6 +66,24 @@ export const AdminLayout = () => {
             >
               <FileText className="mr-2 h-4 w-4" />
               Demandes de Devis
+            </Button>
+          </Link>
+          <Link to="/admin/product-requests">
+            <Button
+              variant={isActive("/admin/product-requests") ? "secondary" : "ghost"}
+              className={`w-full justify-start ${isActive("/admin/product-requests") ? "bg-primary-foreground text-primary" : "text-primary-foreground hover:bg-primary-foreground/10"}`}
+            >
+              <Hammer className="mr-2 h-4 w-4" />
+              Produits Sur Mesure
+            </Button>
+          </Link>
+          <Link to="/admin/users">
+            <Button
+              variant={isActive("/admin/users") ? "secondary" : "ghost"}
+              className={`w-full justify-start ${isActive("/admin/users") ? "bg-primary-foreground text-primary" : "text-primary-foreground hover:bg-primary-foreground/10"}`}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Utilisateurs
             </Button>
           </Link>
         </nav>
