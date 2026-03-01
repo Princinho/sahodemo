@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,21 +6,34 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { authApi } from "@/api/authApi";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Mail } from "lucide-react";
+import { Lock, Mail, Loader2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const [email, setEmail] = useState("admin@saho.com");
   const [password, setPassword] = useState("ChangeMeNow123!");
   const [isLoading, setIsLoading] = useState(false);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
 
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
 
     setIsLoading(true);
+    setShowSlowWarning(false);
+    timerRef.current = setTimeout(() => setShowSlowWarning(true), 5000);
+
     try {
       await authApi.login(email, password);
       navigate("/admin");
@@ -35,6 +48,8 @@ const Login = () => {
       toast({ title: "Erreur", description: message, variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setShowSlowWarning(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
     }
   };
 
@@ -78,8 +93,23 @@ const Login = () => {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Connexion..." : "Se connecter"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                "Se connecter"
+              )}
             </Button>
+            {showSlowWarning && (
+              <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700 dark:text-yellow-400">
+                  Le serveur est en cours de démarrage. L'environnement de démonstration est hébergé sur un serveur gratuit qui se met en veille automatiquement en l'absence de trafic. Le démarrage peut prendre jusqu'à 1 minute. Merci de patienter.
+                </AlertDescription>
+              </Alert>
+            )}
           </form>
         </CardContent>
       </Card>
