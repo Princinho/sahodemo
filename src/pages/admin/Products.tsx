@@ -49,14 +49,14 @@ const Products = () => {
   });
 
   const fetchProducts = () => {
-    productsApi.getAll({ limit: 100, isDisabled: true }).then((res) => setProducts(res.items)).catch(() => {
+    productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {
       toast({ title: "Erreur", description: "Impossible de charger les produits", variant: "destructive" });
     });
   };
 
   useEffect(() => {
     fetchProducts();
-    categoriesApi.getAll({ limit: 200 }).then((res) => setCategories(res.items)).catch(() => {});
+    categoriesApi.getAll({ limit: 200 }).then((res) => setCategories(res.items)).catch(() => { });
   }, []);
 
   const filteredProducts = products.filter(
