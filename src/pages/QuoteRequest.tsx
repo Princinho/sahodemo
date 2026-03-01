@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Send, Package } from "lucide-react";
+import { Send, Package, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Product } from "@/models/Product";
 import { productsApi } from "@/api/productsApi";
 import { quoteRequestsApi } from "@/api/quoteRequestsApi";
@@ -18,6 +19,7 @@ const QuoteRequest = () => {
   const { items, clearCart } = useCart();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -30,7 +32,8 @@ const QuoteRequest = () => {
   });
 
   useEffect(() => {
-    productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {});
+    setIsLoading(true);
+    productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {}).finally(() => setIsLoading(false));
   }, []);
 
   const cartProducts = items
@@ -133,7 +136,7 @@ const QuoteRequest = () => {
                     <Textarea id="message" name="message" value={formData.message} onChange={handleInputChange} placeholder="Précisez vos besoins, délais souhaités..." rows={4} />
                   </div>
                   <Button type="submit" size="lg" className="w-full shadow-gold" disabled={isSubmitting}>
-                    {isSubmitting ? "Envoi en cours..." : (<><Send className="mr-2 h-5 w-5" />Envoyer la demande</>)}
+                    {isSubmitting ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Envoi en cours...</>) : (<><Send className="mr-2 h-5 w-5" />Envoyer la demande</>)}
                   </Button>
                 </form>
               </CardContent>

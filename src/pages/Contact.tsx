@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, Loader2 } from "lucide-react";
 
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -190,12 +190,9 @@ const Contact = () => {
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    "Envoi en cours..."
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Envoi en cours...</>
                   ) : (
-                    <>
-                      <Send className="mr-2 h-5 w-5" />
-                      Envoyer le message
-                    </>
+                    <><Send className="mr-2 h-5 w-5" />Envoyer le message</>
                   )}
                 </Button>
               </form>

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ const Catalog = () => {
   const [sortBy, setSortBy] = useState<string>("featured");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (categoryParam) {
@@ -35,8 +37,11 @@ const Catalog = () => {
   }, [categoryParam]);
 
   useEffect(() => {
-    productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {});
-    categoriesApi.getAll({ limit: 50 }).then((res) => setCategories(res.items)).catch(() => {});
+    setIsLoading(true);
+    Promise.all([
+      productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)),
+      categoriesApi.getAll({ limit: 50 }).then((res) => setCategories(res.items)),
+    ]).catch(() => {}).finally(() => setIsLoading(false));
   }, []);
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -156,7 +161,13 @@ const Catalog = () => {
           </p>
         </div>
 
-        {filteredAndSortedProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="h-72 rounded-lg" />
+            ))}
+          </div>
+        ) : filteredAndSortedProducts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredAndSortedProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
