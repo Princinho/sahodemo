@@ -14,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Search, Eye, Mail, Phone, Plus, Send, Download, FileText } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { quoteRequestsApi, QuoteRequest, QuoteNote } from "@/api/quoteRequestsApi";
 
@@ -24,12 +25,14 @@ const Quotes = () => {
   const [newNote, setNewNote] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const { toast } = useToast();
 
   const fetchQuotes = () => {
+    setIsFetchingData(true);
     quoteRequestsApi.getAll({ limit: 100 }).then((res) => setQuotes(res.items)).catch(() => {
       toast({ title: "Erreur", description: "Impossible de charger les demandes", variant: "destructive" });
-    });
+    }).finally(() => setIsFetchingData(false));
   };
 
   useEffect(() => { fetchQuotes(); }, []);
@@ -128,32 +131,46 @@ const Quotes = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredQuotes.map((quote) => (
-              <TableRow key={quote.id}>
-                <TableCell>
-                  <p className="font-medium">{quote.fullName}</p>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <p className="flex items-center gap-1"><Mail className="h-3 w-3" />{quote.email}</p>
-                    {quote.phone && <p className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" />{quote.phone}</p>}
-                  </div>
-                </TableCell>
-                <TableCell>{new Date(quote.createdAt).toLocaleDateString("fr-FR")}</TableCell>
-                <TableCell>{quote.items.length} article(s)</TableCell>
-                <TableCell className="font-semibold">{formatPrice(calculateQuoteTotal(quote))}</TableCell>
-                <TableCell>{getStatusBadge(quote.status)}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleViewQuote(quote)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredQuotes.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Aucune demande trouvée</TableCell>
-              </TableRow>
+            {isFetchingData ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <>
+                {filteredQuotes.map((quote) => (
+                  <TableRow key={quote.id}>
+                    <TableCell><p className="font-medium">{quote.fullName}</p></TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <p className="flex items-center gap-1"><Mail className="h-3 w-3" />{quote.email}</p>
+                        {quote.phone && <p className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" />{quote.phone}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell>{new Date(quote.createdAt).toLocaleDateString("fr-FR")}</TableCell>
+                    <TableCell>{quote.items.length} article(s)</TableCell>
+                    <TableCell className="font-semibold">{formatPrice(calculateQuoteTotal(quote))}</TableCell>
+                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleViewQuote(quote)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredQuotes.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Aucune demande trouvée</TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>
