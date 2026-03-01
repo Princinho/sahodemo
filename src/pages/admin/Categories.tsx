@@ -15,6 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Plus, Edit, Trash2, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
@@ -27,6 +28,7 @@ const Categories = () => {
   const [editingCategory, setEditingCategory] = useState<ApiCategory | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const { toast } = useToast();
 
@@ -37,9 +39,10 @@ const Categories = () => {
   });
 
   const fetchCategories = () => {
+    setIsFetchingData(true);
     categoriesApi.getAll({ limit: 200 }).then((res) => setCategories(res.items)).catch(() => {
       toast({ title: "Erreur", description: "Impossible de charger les catégories", variant: "destructive" });
-    });
+    }).finally(() => setIsFetchingData(false));
   };
 
   useEffect(() => { fetchCategories(); }, []);
@@ -138,43 +141,58 @@ const Categories = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCategories.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell>
-                  {category.imageUrl ? (
-                    <img src={category.imageUrl} alt={category.name} className="w-12 h-12 object-cover rounded" />
-                  ) : (
-                    <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
-                      <Image className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{category.slug}</TableCell>
-                <TableCell className="max-w-[200px] truncate text-sm">{category.description}</TableCell>
-                <TableCell>
-                  {category.isActive ? (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-muted text-muted-foreground">Inactive</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(category)} title="Modifier">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => { setDeletingCategoryId(category.id); setIsDeleteDialogOpen(true); }} title="Supprimer">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredCategories.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucune catégorie trouvée</TableCell>
-              </TableRow>
+            {isFetchingData ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="w-12 h-12 rounded" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <>
+                {filteredCategories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell>
+                      {category.imageUrl ? (
+                        <img src={category.imageUrl} alt={category.name} className="w-12 h-12 object-cover rounded" />
+                      ) : (
+                        <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                          <Image className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{category.slug}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm">{category.description}</TableCell>
+                    <TableCell>
+                      {category.isActive ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(category)} title="Modifier">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setDeletingCategoryId(category.id); setIsDeleteDialogOpen(true); }} title="Supprimer">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredCategories.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucune catégorie trouvée</TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>

@@ -14,7 +14,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Plus, Edit, Trash2, Eye, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/models/Product";
@@ -30,6 +31,7 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const { toast } = useToast();
 
@@ -49,9 +51,10 @@ const Products = () => {
   });
 
   const fetchProducts = () => {
+    setIsFetchingData(true);
     productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)).catch(() => {
       toast({ title: "Erreur", description: "Impossible de charger les produits", variant: "destructive" });
-    });
+    }).finally(() => setIsFetchingData(false));
   };
 
   useEffect(() => {
@@ -185,43 +188,63 @@ const Products = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell>
-                  <img src={product.imageUrls?.[0] || "/placeholder.svg"} alt={product.name} className="w-12 h-12 object-cover rounded" />
-                </TableCell>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{formatPrice(product.price)}</TableCell>
-                <TableCell>
-                  {product.quantity > 0 ? (
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {product.quantity} en stock
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rupture</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    {product.isTrending && <Badge className="bg-accent text-accent-foreground">Vedette</Badge>}
-                    {product.isDisabled && <Badge variant="outline">Désactivé</Badge>}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Link to={`/product/${product.id}`} target="_blank">
-                      <Button variant="ghost" size="icon" title="Aperçu"><Eye className="h-4 w-4" /></Button>
-                    </Link>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} title="Modifier">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => { setDeletingProductId(product.id); setIsDeleteDialogOpen(true); }} title="Supprimer">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {isFetchingData ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="w-12 h-12 rounded" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <>
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <img src={product.imageUrls?.[0] || "/placeholder.svg"} alt={product.name} className="w-12 h-12 object-cover rounded" />
+                    </TableCell>
+                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell>{formatPrice(product.price)}</TableCell>
+                    <TableCell>
+                      {product.quantity > 0 ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          {product.quantity} en stock
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rupture</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {product.isTrending && <Badge className="bg-accent text-accent-foreground">Vedette</Badge>}
+                        {product.isDisabled && <Badge variant="outline">Désactivé</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link to={`/product/${product.id}`} target="_blank">
+                          <Button variant="ghost" size="icon" title="Aperçu"><Eye className="h-4 w-4" /></Button>
+                        </Link>
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(product)} title="Modifier">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setDeletingProductId(product.id); setIsDeleteDialogOpen(true); }} title="Supprimer">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredProducts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Aucun produit trouvé</TableCell>
+                  </TableRow>
+                )}
+              </>
+            )}
           </TableBody>
         </Table>
       </div>
