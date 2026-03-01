@@ -1,8 +1,8 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 
-const API_BASE_URL = "https://sahobackend.onrender.com";
-
+// const API_BASE_URL = "https://sahobackend.onrender.com";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
