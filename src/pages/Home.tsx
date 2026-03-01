@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Package, Sparkles, Shield } from "lucide-react";
+import { ArrowRight, Package, Sparkles, Shield, Loader2 } from "lucide-react";
 import { CategoryCard } from "@/components/CategoryCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
 
 const Home = () => {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     categoriesApi
       .getAll({ limit: 50, isActive: true })
       .then((res) => setCategories(res.items))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   return (
@@ -89,11 +92,19 @@ const Home = () => {
             Explorez notre collection organisée par univers
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-48 rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {categories.map((category) => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* CTA Section */}

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Send, FileImage } from "lucide-react";
+import { Send, FileImage, Loader2 } from "lucide-react";
 import { productRequestsApi } from "@/api/productRequestsApi";
 
 const RequestProduct = () => {
@@ -171,7 +171,9 @@ const RequestProduct = () => {
               </div>
 
               <Button type="submit" size="lg" className="w-full shadow-gold" disabled={isSubmitting}>
-                {isSubmitting ? "Envoi en cours..." : (
+                {isSubmitting ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Envoi en cours...</>
+                ) : (
                   <><Send className="mr-2 h-5 w-5" />Envoyer ma demande</>
                 )}
               </Button>
