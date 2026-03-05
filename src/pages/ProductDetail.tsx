@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,19 +19,26 @@ import {
   Ruler,
   Palette,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { Product } from "@/models/Product";
 import { productsApi } from "@/api/productsApi";
 
+const AUTO_SLIDE_INTERVAL = 5000;
+
 const ProductDetail = () => {
-  const { slug } = useParams(); // slug is actually the product id
+  const { slug } = useParams();
   const { addItem } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
     setLoading(true);
@@ -46,6 +53,50 @@ const ProductDetail = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const imageCount = product?.imageUrls?.length || 0;
+
+  const goToNext = useCallback(() => {
+    if (imageCount <= 1) return;
+    setSelectedImage((prev) => (prev + 1) % imageCount);
+    setProgress(0);
+    lastTimeRef.current = 0;
+  }, [imageCount]);
+
+  const goToPrev = useCallback(() => {
+    if (imageCount <= 1) return;
+    setSelectedImage((prev) => (prev - 1 + imageCount) % imageCount);
+    setProgress(0);
+    lastTimeRef.current = 0;
+  }, [imageCount]);
+
+  // Auto-slide with progress
+  useEffect(() => {
+    if (imageCount <= 1) return;
+
+    setProgress(0);
+    lastTimeRef.current = 0;
+
+    const tick = (timestamp: number) => {
+      if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+      const elapsed = timestamp - lastTimeRef.current;
+      const pct = Math.min((elapsed / AUTO_SLIDE_INTERVAL) * 100, 100);
+      setProgress(pct);
+
+      if (elapsed >= AUTO_SLIDE_INTERVAL) {
+        setSelectedImage((prev) => (prev + 1) % imageCount);
+        lastTimeRef.current = 0;
+        setProgress(0);
+      }
+
+      progressRef.current = requestAnimationFrame(tick);
+    };
+
+    progressRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (progressRef.current) cancelAnimationFrame(progressRef.current);
+    };
+  }, [imageCount, selectedImage]);
 
   if (loading) {
     return (
@@ -93,15 +144,65 @@ const ProductDetail = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           <div>
-            <div className="aspect-square rounded-lg overflow-hidden shadow-medium mb-4">
-              <img src={product.imageUrls?.[selectedImage] || "/placeholder.svg"} alt={product.name} className="w-full h-full object-cover" />
+            <div className="relative aspect-square rounded-lg overflow-hidden shadow-medium mb-4 group">
+              <img
+                src={product.imageUrls?.[selectedImage] || "/placeholder.svg"}
+                alt={product.name}
+                className="w-full h-full object-cover transition-opacity duration-500"
+              />
+              {imageCount > 1 && (
+                <>
+                  <button
+                    onClick={goToPrev}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
+                  </button>
+                  <button
+                    onClick={goToNext}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background"
+                  >
+                    <ChevronRight className="h-5 w-5 text-foreground" />
+                  </button>
+
+                  {/* Dot indicators with progress */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+                    {product.imageUrls.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setSelectedImage(index);
+                          setProgress(0);
+                          lastTimeRef.current = 0;
+                        }}
+                        className="relative h-2 rounded-full overflow-hidden transition-all duration-300"
+                        style={{ width: selectedImage === index ? 32 : 8 }}
+                      >
+                        <span className="absolute inset-0 bg-foreground/30 rounded-full" />
+                        {selectedImage === index ? (
+                          <span
+                            className="absolute inset-y-0 left-0 bg-primary-foreground rounded-full"
+                            style={{ width: `${progress}%`, transition: "width 50ms linear" }}
+                          />
+                        ) : (
+                          <span className="absolute inset-0 bg-foreground/50 rounded-full" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
             {product.imageUrls?.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
                 {product.imageUrls.map((image, index) => (
                   <button
                     key={index}
-                    onClick={() => setSelectedImage(index)}
+                    onClick={() => {
+                      setSelectedImage(index);
+                      setProgress(0);
+                      lastTimeRef.current = 0;
+                    }}
                     className={`aspect-square rounded-lg overflow-hidden border-2 transition-smooth ${selectedImage === index ? "border-primary shadow-soft" : "border-transparent hover:border-muted"}`}
                   >
                     <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
