@@ -104,10 +104,20 @@ const Home = () => {
           </p>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-48 rounded-lg" />
-            ))}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+            {showSlowWarning && (
+              <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700 dark:text-yellow-400">
+                  Le serveur est en cours de démarrage. L'environnement de démonstration est hébergé sur un serveur gratuit qui se met en veille automatiquement en l'absence de trafic. Le démarrage peut prendre jusqu'à 1 minute. Merci de patienter.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
