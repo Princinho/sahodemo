@@ -67,7 +67,7 @@ const Products = () => {
   );
 
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", minimumFractionDigits: 0 }).format(price);
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(price);
 
   const resetForm = () => {
     setFormData({
