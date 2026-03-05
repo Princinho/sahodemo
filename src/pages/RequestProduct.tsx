@@ -144,7 +144,7 @@ const RequestProduct = () => {
                   </div>
                   <div>
                     <Label htmlFor="budget">Budget indicatif <span className="text-muted-foreground">(optionnel)</span></Label>
-                    <Input id="budget" name="budget" value={formData.budget} onChange={handleInputChange} placeholder="Ex: 150 000 FCFA" />
+                    <Input id="budget" name="budget" value={formData.budget} onChange={handleInputChange} placeholder="Ex: 150 €" />
                   </div>
                 </div>
 

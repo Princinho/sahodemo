@@ -29,8 +29,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'XOF',
-      minimumFractionDigits: 0,
+      currency: 'EUR',
     }).format(price);
   };
 
