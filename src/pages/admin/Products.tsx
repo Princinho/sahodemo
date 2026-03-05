@@ -274,7 +274,7 @@ const Products = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Prix (XOF)</Label>
+                <Label>Prix (€)</Label>
                 <Input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} />
               </div>
               <div className="grid gap-2">

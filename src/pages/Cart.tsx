@@ -28,7 +28,7 @@ const Cart = () => {
     .filter(Boolean) as (Product & { quantity: number; selectedColor?: string })[];
 
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", minimumFractionDigits: 0 }).format(price);
+    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(price);
 
   const subtotal = cartProducts.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
