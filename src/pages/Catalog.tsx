@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -11,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, AlertTriangle } from "lucide-react";
 import { Product } from "@/models/Product";
 import { productsApi } from "@/api/productsApi";
 import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
@@ -26,6 +27,8 @@ const Catalog = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (categoryParam) {
@@ -38,10 +41,18 @@ const Catalog = () => {
 
   useEffect(() => {
     setIsLoading(true);
+    timerRef.current = setTimeout(() => setShowSlowWarning(true), 1000);
     Promise.all([
       productsApi.getAll({ limit: 100 }).then((res) => setProducts(res.items)),
       categoriesApi.getAll({ limit: 50 }).then((res) => setCategories(res.items)),
-    ]).catch(() => {}).finally(() => setIsLoading(false));
+    ]).catch(() => {}).finally(() => {
+      setIsLoading(false);
+      setShowSlowWarning(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    });
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   const filteredAndSortedProducts = useMemo(() => {

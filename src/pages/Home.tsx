@@ -1,21 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Package, Sparkles, Shield, Loader2 } from "lucide-react";
+import { ArrowRight, Package, Sparkles, Shield, AlertTriangle } from "lucide-react";
 import { CategoryCard } from "@/components/CategoryCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
 
 const Home = () => {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    timerRef.current = setTimeout(() => setShowSlowWarning(true), 1000);
     categoriesApi
       .getAll({ limit: 50, isActive: true })
       .then((res) => setCategories(res.items))
       .catch(() => {})
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+        setShowSlowWarning(false);
+        if (timerRef.current) clearTimeout(timerRef.current);
+      });
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   return (
