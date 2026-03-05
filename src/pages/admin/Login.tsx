@@ -32,7 +32,7 @@ const Login = () => {
 
     setIsLoading(true);
     setShowSlowWarning(false);
-    timerRef.current = setTimeout(() => setShowSlowWarning(true), 5000);
+    timerRef.current = setTimeout(() => setShowSlowWarning(true), 1000);
 
     try {
       await authApi.login(email, password);
