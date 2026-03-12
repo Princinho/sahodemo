@@ -1,21 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Package, Sparkles, Shield, Loader2 } from "lucide-react";
+import { ArrowRight, Package, Sparkles, Shield, AlertTriangle } from "lucide-react";
 import { CategoryCard } from "@/components/CategoryCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { categoriesApi, ApiCategory } from "@/api/categoriesApi";
 
 const Home = () => {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    timerRef.current = setTimeout(() => setShowSlowWarning(true), 1000);
     categoriesApi
       .getAll({ limit: 50, isActive: true })
       .then((res) => setCategories(res.items))
       .catch(() => {})
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+        setShowSlowWarning(false);
+        if (timerRef.current) clearTimeout(timerRef.current);
+      });
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   return (
@@ -93,10 +104,20 @@ const Home = () => {
           </p>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-48 rounded-lg" />
-            ))}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+            {showSlowWarning && (
+              <Alert className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700 dark:text-yellow-400">
+                  Le serveur est en cours de démarrage. L'environnement de démonstration est hébergé sur un serveur gratuit qui se met en veille automatiquement en l'absence de trafic. Le démarrage peut prendre jusqu'à 1 minute. Merci de patienter.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

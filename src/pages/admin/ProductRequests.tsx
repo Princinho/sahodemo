@@ -14,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Search, Eye, Mail, Phone, Plus, Send, Download, FileText, Image, ExternalLink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   productRequestsApi,
@@ -28,15 +29,18 @@ const ProductRequests = () => {
   const [newNote, setNewNote] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const { toast } = useToast();
 
   const fetchRequests = () => {
+    setIsFetchingData(true);
     productRequestsApi
       .getAll({ limit: 100 })
       .then((res) => setRequests(res.items))
       .catch(() => {
         toast({ title: "Erreur", description: "Impossible de charger les demandes", variant: "destructive" });
-      });
+      })
+      .finally(() => setIsFetchingData(false));
   };
 
   useEffect(() => {
@@ -127,35 +131,49 @@ const ProductRequests = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRequests.map((req) => (
-              <TableRow key={req.id}>
-                <TableCell>
-                  <p className="font-medium">{req.fullName}</p>
-                  {req.company && <p className="text-xs text-muted-foreground">{req.company}</p>}
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    <p className="flex items-center gap-1"><Mail className="h-3 w-3" />{req.email}</p>
-                    {req.phone && <p className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" />{req.phone}</p>}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <p className="text-sm max-w-[200px] truncate">{req.description}</p>
-                </TableCell>
-                <TableCell>{req.quantity || 1}</TableCell>
-                <TableCell>{new Date(req.createdAt).toLocaleDateString("fr-FR")}</TableCell>
-                <TableCell>{getStatusBadge(req.status)}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleViewRequest(req)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredRequests.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Aucune demande trouvée</TableCell>
-              </TableRow>
+            {isFetchingData ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <>
+                {filteredRequests.map((req) => (
+                  <TableRow key={req.id}>
+                    <TableCell>
+                      <p className="font-medium">{req.fullName}</p>
+                      {req.company && <p className="text-xs text-muted-foreground">{req.company}</p>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <p className="flex items-center gap-1"><Mail className="h-3 w-3" />{req.email}</p>
+                        {req.phone && <p className="flex items-center gap-1 text-muted-foreground"><Phone className="h-3 w-3" />{req.phone}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell><p className="text-sm max-w-[200px] truncate">{req.description}</p></TableCell>
+                    <TableCell>{req.quantity || 1}</TableCell>
+                    <TableCell>{new Date(req.createdAt).toLocaleDateString("fr-FR")}</TableCell>
+                    <TableCell>{getStatusBadge(req.status)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleViewRequest(req)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredRequests.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Aucune demande trouvée</TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>
