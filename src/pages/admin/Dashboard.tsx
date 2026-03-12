@@ -99,7 +99,7 @@ const Dashboard = () => {
         <CardHeader>
           <CardTitle>Actions Rapides</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Link to="/admin/products">
             <Button variant="outline" className="w-full">
               <Package className="mr-2 h-4 w-4" />
